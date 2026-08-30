@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  orquestro-db:
+    image: postgres:16-alpine
+    container_name: orquestro-db
+    environment:
+      POSTGRES_DB: orquestro_db
+      POSTGRES_USER: orquestro_admin
+      POSTGRES_PASSWORD: orquestro_secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - orquestro_data:/var/lib/postgresql/data
+
+volumes:
+  orquestro_data:
