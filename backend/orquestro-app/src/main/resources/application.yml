@@ -2,12 +2,14 @@ spring:
   application:
     name: orquestro
   
+  # Database Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/orquestro_db
     username: orquestro_admin
     password: orquestro_secure_password
     driver-class-name: org.postgresql.Driver
 
+  # Persistence Configuration
   jpa:
     hibernate:
       ddl-auto: update
@@ -17,7 +19,27 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+# Server Configuration
 server:
   port: 8080
   servlet:
     context-path: /api
+
+# Custom Application Security Settings
+application:
+  security:
+    jwt:
+      # Cryptographically secure secret key (HMAC-SHA256) in Base64
+      # Note: In production, this should be an environment variable.
+      secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      # Access Token Expiration: 86400000 ms = 24 hours
+      expiration: 86400000
+      # Refresh Token Expiration: 604800000 ms = 7 days
+      refresh-token-expiration: 604800000
+
+# Logging Configuration for easier debugging during development
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
