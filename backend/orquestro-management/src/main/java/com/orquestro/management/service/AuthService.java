@@ -2,24 +2,33 @@ package com.orquestro.management.service;
 
 import com.orquestro.data.domain.Language;
 import com.orquestro.data.domain.User;
+import com.orquestro.data.domain.UserSession;
 import com.orquestro.data.domain.enums.UserRole;
 import com.orquestro.data.repository.LanguageRepository;
 import com.orquestro.data.repository.UserRepository;
+import com.orquestro.data.repository.UserSessionRepository;
 import com.orquestro.management.dto.request.AuthenticationRequestDTO;
 import com.orquestro.management.dto.request.RegisterRequestDTO;
+import com.orquestro.management.dto.request.TokenRefreshRequestDTO;
 import com.orquestro.management.dto.response.AuthenticationResponseDTO;
+import com.orquestro.management.dto.response.TokenRefreshResponseDTO;
+import com.orquestro.management.exception.BusinessException;
 import com.orquestro.management.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 /**
- * Service responsible for managing user authentication and registration workflows.
- * It handles password encoding, token generation, and ensures data consistency
- * between identity and language preferences.
+ * Service responsible for managing user authentication, registration, and session rotation.
+ * It coordinates token generation with database-backed session management for enhanced security.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -29,79 +38,129 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final LanguageRepository languageRepository;
+    private final UserSessionRepository userSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
+    @Value("${application.security.jwt.refresh-token-expiration}")
+    private long refreshExpiration;
+
     /**
-     * Registers a new user in the platform.
-     * Encodes the password, assigns a default role, and links the preferred language.
-     * 
-     * @param request The registration data transfer object.
-     * @return AuthenticationResponseDTO containing the JWT and user details.
-     * @throws RuntimeException if the email is already in use or default language is missing.
+     * Registers a new user and initiates a secure session.
      */
     @Transactional
     public AuthenticationResponseDTO register(RegisterRequestDTO request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Email address already in use.");
+            throw new BusinessException("Email address already in use.", HttpStatus.CONFLICT);
         }
 
-        /* Resolves the user language: requested language or system default */
         Language language = languageRepository.findByCode(request.languageCode())
                 .orElseGet(() -> languageRepository.findByIsDefaultTrue()
-                        .orElseThrow(() -> new RuntimeException("Default language not found in system.")));
+                        .orElseThrow(() -> new BusinessException("Default language not found.", HttpStatus.INTERNAL_SERVER_ERROR)));
 
         User user = User.builder()
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .globalRole(UserRole.ROLE_USER) /* Default role for new registrations */
+                .globalRole(UserRole.ROLE_USER)
                 .language(language)
                 .active(true)
                 .build();
 
         User savedUser = userRepository.save(user);
-        String jwtToken = jwtService.generateToken(savedUser);
-
-        return mapToResponse(savedUser, jwtToken);
+        return createSessionAndBuildResponse(savedUser);
     }
 
     /**
-     * Authenticates a user based on email and password.
-     * Uses Spring Security's AuthenticationManager to verify credentials.
-     * 
-     * @param request The authentication credentials.
-     * @return AuthenticationResponseDTO containing the JWT and user details.
+     * Authenticates credentials and creates a new tracked session.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
+                new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
 
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("User not found after authentication."));
+                .orElseThrow(() -> new BusinessException("User not found.", HttpStatus.NOT_FOUND));
 
-        String jwtToken = jwtService.generateToken(user);
-
-        return mapToResponse(user, jwtToken);
+        return createSessionAndBuildResponse(user);
     }
 
     /**
-     * Internal helper to map User entity and token to the response DTO.
+     * Performs Refresh Token Rotation.
+     * Validates the old refresh token, revokes it, and issues a new pair of tokens.
+     * This is a critical security measure to prevent replay attacks.
      */
-    private AuthenticationResponseDTO mapToResponse(User user, String token) {
+    @Transactional
+    public TokenRefreshResponseDTO refreshToken(TokenRefreshRequestDTO request) {
+        UserSession session = userSessionRepository.findByRefreshTokenAndRevokedFalse(request.refreshToken())
+                .orElseThrow(() -> new BusinessException("Invalid or revoked refresh token.", HttpStatus.UNAUTHORIZED));
+
+        if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
+            session.setRevoked(true);
+            userSessionRepository.save(session);
+            throw new BusinessException("Refresh token has expired.", HttpStatus.UNAUTHORIZED);
+        }
+
+        /* Rotation: Revoke current session and issue a new one */
+        session.setRevoked(true);
+        userSessionRepository.save(session);
+
+        User user = session.getUser();
+        String newAccessToken = jwtService.generateToken(user);
+        String newRefreshToken = UUID.randomUUID().toString(); /* Using UUID for opaque Refresh Tokens */
+
+        saveUserSession(user, newRefreshToken);
+
+        return TokenRefreshResponseDTO.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .build();
+    }
+
+    /**
+     * Logs out the user by revoking the specific refresh token.
+     */
+    @Transactional
+    public void logout(String refreshToken) {
+        userSessionRepository.findByRefreshToken(refreshToken)
+                .ifPresent(session -> {
+                    session.setRevoked(true);
+                    userSessionRepository.save(session);
+                });
+    }
+
+    /**
+     * Internal helper to create a session and map the full authentication response.
+     */
+    private AuthenticationResponseDTO createSessionAndBuildResponse(User user) {
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = UUID.randomUUID().toString();
+
+        saveUserSession(user, refreshToken);
+
         return AuthenticationResponseDTO.builder()
-                .accessToken(token)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .globalRole(user.getGlobalRole().name())
                 .build();
+    }
+
+    /**
+     * Persists a new session in the database.
+     */
+    private void saveUserSession(User user, String refreshToken) {
+        UserSession session = UserSession.builder()
+                .user(user)
+                .refreshToken(refreshToken)
+                .expiresAt(LocalDateTime.now().plusWeeks(1)) /* Standard 1-week expiration for Refresh Tokens */
+                .revoked(false)
+                .build();
+        userSessionRepository.save(session);
     }
 }

@@ -5,20 +5,21 @@ import java.util.UUID;
 
 /**
  * Data Transfer Object representing a successful authentication response.
- * This record carries the JWT access token and basic user identification 
- * to be stored and used by the frontend application.
+ * Updated to include the refresh token for session rotation.
  * 
- * @param accessToken The JWT token to be used in the Authorization header.
+ * @param accessToken The short-lived JWT token.
+ * @param refreshToken The long-lived token used to renew access.
  * @param userId The unique identifier of the authenticated user.
  * @param email The user's email address.
  * @param fullName The user's concatenated first and last name.
- * @param globalRole The user's global role in the Orquestro platform.
+ * @param globalRole The user's global role.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 @Builder
 public record AuthenticationResponseDTO(
     String accessToken,
+    String refreshToken,
     UUID userId,
     String email,
     String fullName,
