@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 

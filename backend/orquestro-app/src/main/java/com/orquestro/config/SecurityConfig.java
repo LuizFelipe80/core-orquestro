@@ -55,7 +55,8 @@ public class SecurityConfig {
             /* Defines access rules for HTTP requests */
             .authorizeHttpRequests(auth -> auth
                 /* Public endpoints for authentication and initial setup */
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/auth/authenticate").permitAll()
+                .requestMatchers("/auth/register").hasRole("ADMIN")
                 /* All other requests must be authenticated */
                 .anyRequest().authenticated()
             )

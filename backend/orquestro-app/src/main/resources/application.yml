@@ -5,19 +5,29 @@ spring:
   # Database Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/orquestro_db
-    username: orquestro_admin
-    password: orquestro_secure_password
+    username: postgres
+    password: 12345
     driver-class-name: org.postgresql.Driver
 
   # Persistence Configuration
   jpa:
     hibernate:
-      ddl-auto: update
+      # We use 'validate' so Hibernate checks if the database matches our entities
+      # without making any changes. Flyway handles the changes.
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Database Versioning Configuration
+  flyway:
+    enabled: true
+    # Allows Flyway to start on an existing database by creating a baseline
+    baseline-on-migrate: true
+    # Directory where our SQL migration scripts will be stored
+    locations: classpath:db/migration
 
 # Server Configuration
 server:
@@ -30,7 +40,6 @@ application:
   security:
     jwt:
       # Cryptographically secure secret key (HMAC-SHA256) in Base64
-      # Note: In production, this should be an environment variable.
       secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       # Access Token Expiration: 86400000 ms = 24 hours
       expiration: 86400000
