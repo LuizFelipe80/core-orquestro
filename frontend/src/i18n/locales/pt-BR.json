@@ -48,6 +48,10 @@
     "status_updated": "Status do usuário atualizado.",
     "status_error": "Falha ao atualizar status.",
     "load_error": "Falha ao carregar usuários.",
+    "new_user": "Novo Usuário",
+    "create_user": "Criar Novo Usuário",
+    "create_success": "Usuário criado com sucesso.",
+    "create_error": "Falha ao criar usuário.",
     "edit_user": "Editar Usuário",
     "update_success": "Usuário atualizado com sucesso.",
     "update_error": "Falha ao atualizar usuário.",
@@ -56,6 +60,7 @@
     "unlock_confirm": "Tem certeza que deseja desbloquear a conta de {{name}}?",
     "unlock_success": "Conta desbloqueada com sucesso.",
     "unlock_error": "Falha ao desbloquear conta.",
+    "unlock_action": "Desbloquear Conta",
     "profile_description": "Gerencie suas informações pessoais e configurações de segurança.",
     "tab_general": "Informações Gerais",
     "tab_security": "Segurança",
@@ -69,7 +74,8 @@
     "password_too_short": "A senha deve ter pelo menos 8 caracteres",
     "update_password": "Atualizar Senha",
     "profile_update_success": "Perfil atualizado com sucesso.",
-    "password_update_success": "Senha alterada com sucesso."
+    "password_update_success": "Senha alterada com sucesso.",
+    "profile_load_error": "Falha ao carregar informações do perfil."
   },
   "languages": {
     "name": "Idioma",

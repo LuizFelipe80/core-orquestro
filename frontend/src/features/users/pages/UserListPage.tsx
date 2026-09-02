@@ -1,17 +1,24 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Table, Tag, Switch, Space, Typography, Card, Button, Tooltip, App as AntdApp } from 'antd';
-import { EditOutlined, UnlockOutlined, LockOutlined } from '@ant-design/icons';
+import { 
+  EditOutlined, 
+  UnlockOutlined, 
+  LockOutlined, 
+  UserAddOutlined 
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';
 import { UserResponseDTO } from '../types/userTypes';
 import userService from '../services/userService';
 import UserEditModal from '../components/UserEditModal';
+import UserCreateModal from '../components/UserCreateModal';
 
 const { Title } = Typography;
 
 /**
- * Enhanced User List Page with security management.
- * Provides visual indicators for locked accounts and administrative unlock actions.
+ * Complete User Management Page.
+ * Handles the full lifecycle of users including listing, creation, 
+ * editing, and security status management (locking/unlocking).
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -19,15 +26,21 @@ const UserListPage: React.FC = () => {
   const { t } = useTranslation();
   const { message, modal } = AntdApp.useApp();
   
+  /* Pagination and Data State */
   const [users, setUsers] = useState<UserResponseDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
+  /* Modals State */
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserResponseDTO | null>(null);
 
+  /**
+   * Fetches the paginated user list.
+   */
   const loadUsers = useCallback(async (page: number) => {
     setLoading(true);
     try {
@@ -35,7 +48,7 @@ const UserListPage: React.FC = () => {
       setUsers(data.content);
       setTotalElements(data.totalElements);
     } catch (error: any) {
-      message.error(t('users.load_error') || 'Failed to load users.');
+      message.error(t('users.load_error'));
     } finally {
       setLoading(false);
     }
@@ -45,6 +58,9 @@ const UserListPage: React.FC = () => {
     loadUsers(currentPage);
   }, [loadUsers, currentPage]);
 
+  /**
+   * Handles user activation toggle.
+   */
   const handleToggleStatus = async (id: string) => {
     try {
       await userService.toggleUserStatus(id);
@@ -56,35 +72,38 @@ const UserListPage: React.FC = () => {
   };
 
   /**
-   * Handles the account unlock process with a confirmation dialog.
+   * Handles administrative account unlocking.
    */
   const handleUnlock = (user: UserResponseDTO) => {
     modal.confirm({
-      title: t('users.unlock_title') || 'Unlock Account',
-      content: t('users.unlock_confirm', { name: user.firstName }) || `Are you sure you want to unlock ${user.firstName}'s account?`,
-      okText: t('Procced') || 'Yes',
-      cancelText: t('Cancel') || 'No',
+      title: t('users.unlock_title'),
+      content: t('users.unlock_confirm', { name: user.firstName }),
+      okText: t('common.yes'),
+      cancelText: t('common.no'),
       onOk: async () => {
         try {
           await userService.unlockUser(user.id);
-          message.success(t('users.unlock_success') || 'Account successfully unlocked.');
+          message.success(t('users.unlock_success'));
           loadUsers(currentPage);
         } catch (error: any) {
-          message.error(t('users.unlock_error') || 'Failed to unlock account.');
+          message.error(t('users.unlock_error'));
         }
       },
     });
   };
 
+  /**
+   * Table Columns Definition
+   */
   const columns: ColumnsType<UserResponseDTO> = [
     {
-      title: t('users.full_name') || 'Name',
+      title: t('users.full_name'),
       key: 'name',
       render: (_, record) => (
         <Space>
           {`${record.firstName} ${record.lastName}`}
           {record.accountLocked && (
-            <Tooltip title={t('users.locked_hint') || 'Locked by brute force protection'}>
+            <Tooltip title={t('users.locked_hint')}>
               <Tag color="error" icon={<LockOutlined />}>LOCKED</Tag>
             </Tooltip>
           )}
@@ -92,12 +111,12 @@ const UserListPage: React.FC = () => {
       ),
     },
     {
-      title: t('users.email') || 'Email',
+      title: t('users.email'),
       dataIndex: 'email',
       key: 'email',
     },
     {
-      title: t('users.role') || 'Role',
+      title: t('users.role'),
       dataIndex: 'globalRole',
       key: 'role',
       render: (role: string) => {
@@ -108,7 +127,7 @@ const UserListPage: React.FC = () => {
       },
     },
     {
-      title: t('users.status') || 'Active',
+      title: t('users.status'),
       dataIndex: 'active',
       key: 'status',
       render: (active: boolean, record) => (
@@ -120,7 +139,7 @@ const UserListPage: React.FC = () => {
       ),
     },
     {
-      title: t('common.actions') || 'Actions',
+      title: t('common.actions'),
       key: 'actions',
       fixed: 'right',
       width: 120,
@@ -135,7 +154,7 @@ const UserListPage: React.FC = () => {
             }}
           />
           {record.accountLocked && (
-            <Tooltip title={t('users.unlock_action') || 'Unlock Account'}>
+            <Tooltip title={t('users.unlock_action')}>
               <Button 
                 type="text" 
                 danger
@@ -152,7 +171,16 @@ const UserListPage: React.FC = () => {
   return (
     <Space direction="vertical" size="large" style={{ display: 'flex' }}>
       <Card bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-        <Title level={4} style={{ margin: 0 }}>{t('menu.users')}</Title>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={4} style={{ margin: 0 }}>{t('menu.users')}</Title>
+          <Button 
+            type="primary" 
+            icon={<UserAddOutlined />} 
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            {t('users.new_user')}
+          </Button>
+        </div>
       </Card>
 
       <Table
@@ -169,6 +197,17 @@ const UserListPage: React.FC = () => {
         scroll={{ x: 1000 }}
       />
 
+      {/* Modal for Creating Users */}
+      <UserCreateModal 
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          loadUsers(currentPage);
+        }}
+      />
+
+      {/* Modal for Editing Users */}
       <UserEditModal 
         open={isEditModalOpen}
         user={selectedUser}
