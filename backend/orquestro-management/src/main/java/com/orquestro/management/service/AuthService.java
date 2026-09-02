@@ -18,23 +18,30 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Service responsible for managing user authentication, registration, and session rotation.
- * It coordinates token generation with database-backed session management for enhanced security.
+ * Service responsible for user authentication, registration, and session management.
+ * Implements advanced security features including brute force protection, 
+ * account locking, and secure token rotation.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final int MAX_FAILED_ATTEMPTS = 5;
 
     private final UserRepository userRepository;
     private final LanguageRepository languageRepository;
@@ -47,7 +54,72 @@ public class AuthService {
     private long refreshExpiration;
 
     /**
-     * Registers a new user and initiates a secure session.
+     * Main authentication entry point. 
+     * Coordinates the login process and handles security exceptions.
+     * 
+     * @param request the login credentials.
+     * @return the authentication response with tokens.
+     */
+    public AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request) {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            );
+
+            /* On successful authentication, reset security counters and issue tokens */
+            return processSuccessfulLogin(request.email());
+
+        } catch (BadCredentialsException e) {
+            /* On failed authentication, increment counter in a separate transaction */
+            updateFailedAttempts(request.email());
+            throw new BusinessException("Invalid email or password", HttpStatus.UNAUTHORIZED);
+        } catch (LockedException e) {
+            throw new BusinessException("This account has been locked due to multiple failed login attempts.", HttpStatus.FORBIDDEN);
+        } catch (DisabledException e) {
+            throw new BusinessException("This account is currently inactive.", HttpStatus.FORBIDDEN);
+        }
+    }
+
+    /**
+     * Increments the failed login attempt counter.
+     * Uses Propagation.REQUIRES_NEW to ensure the update is committed 
+     * even if the main authentication transaction rolls back.
+     * 
+     * @param email the user's email.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateFailedAttempts(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            if (user.isActive() && !user.isAccountLocked()) {
+                user.incrementFailedAttempts();
+                if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
+                    user.setAccountLocked(true);
+                }
+                userRepository.save(user);
+            }
+        });
+    }
+
+    /**
+     * Resets failed attempts and updates login metadata after a successful login.
+     * 
+     * @param email the user's email.
+     * @return the complete authentication response.
+     */
+    @Transactional
+    public AuthenticationResponseDTO processSuccessfulLogin(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User not found.", HttpStatus.NOT_FOUND));
+
+        user.resetFailedAttempts();
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        return createSessionAndBuildResponse(user);
+    }
+
+    /**
+     * Registers a new user with standard initial security state.
      */
     @Transactional
     public AuthenticationResponseDTO register(RegisterRequestDTO request) {
@@ -67,6 +139,8 @@ public class AuthService {
                 .globalRole(UserRole.ROLE_USER)
                 .language(language)
                 .active(true)
+                .accountLocked(false)
+                .failedLoginAttempts(0)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -74,24 +148,8 @@ public class AuthService {
     }
 
     /**
-     * Authenticates credentials and creates a new tracked session.
-     */
-    @Transactional
-    public AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
-        );
-
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException("User not found.", HttpStatus.NOT_FOUND));
-
-        return createSessionAndBuildResponse(user);
-    }
-
-    /**
-     * Performs Refresh Token Rotation.
-     * Validates the old refresh token, revokes it, and issues a new pair of tokens.
-     * This is a critical security measure to prevent replay attacks.
+     * Performs secure Refresh Token Rotation.
+     * Revokes the old token and issues a new pair of access/refresh tokens.
      */
     @Transactional
     public TokenRefreshResponseDTO refreshToken(TokenRefreshRequestDTO request) {
@@ -104,13 +162,12 @@ public class AuthService {
             throw new BusinessException("Refresh token has expired.", HttpStatus.UNAUTHORIZED);
         }
 
-        /* Rotation: Revoke current session and issue a new one */
         session.setRevoked(true);
         userSessionRepository.save(session);
 
         User user = session.getUser();
         String newAccessToken = jwtService.generateToken(user);
-        String newRefreshToken = UUID.randomUUID().toString(); /* Using UUID for opaque Refresh Tokens */
+        String newRefreshToken = UUID.randomUUID().toString();
 
         saveUserSession(user, newRefreshToken);
 
@@ -121,7 +178,7 @@ public class AuthService {
     }
 
     /**
-     * Logs out the user by revoking the specific refresh token.
+     * Voluntarily terminates a user session.
      */
     @Transactional
     public void logout(String refreshToken) {
@@ -133,7 +190,7 @@ public class AuthService {
     }
 
     /**
-     * Internal helper to create a session and map the full authentication response.
+     * Internal helper to orchestrate token generation and session persistence.
      */
     private AuthenticationResponseDTO createSessionAndBuildResponse(User user) {
         String accessToken = jwtService.generateToken(user);
@@ -152,13 +209,13 @@ public class AuthService {
     }
 
     /**
-     * Persists a new session in the database.
+     * Saves a new session record in the database for auditing and rotation.
      */
     private void saveUserSession(User user, String refreshToken) {
         UserSession session = UserSession.builder()
                 .user(user)
                 .refreshToken(refreshToken)
-                .expiresAt(LocalDateTime.now().plusWeeks(1)) /* Standard 1-week expiration for Refresh Tokens */
+                .expiresAt(LocalDateTime.now().plusWeeks(1))
                 .revoked(false)
                 .build();
         userSessionRepository.save(session);

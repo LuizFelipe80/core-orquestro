@@ -1,16 +1,6 @@
 package com.orquestro.data.domain;
 
-import java.io.Serial;
-import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
-
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
 import com.orquestro.data.domain.enums.UserRole;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,11 +14,19 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.io.Serial;
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Represents a system user within the Orquestro platform.
- * Implements Spring Security's UserDetails to integrate seamlessly with 
- * the authentication and authorization engine.
+ * Implements Spring Security's UserDetails for authentication integration.
+ * Includes security fields for brute force protection and account locking.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -40,10 +38,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User extends BaseEntity implements UserDetails {
-	@Serial
-	private static final long serialVersionUID = 1L;
 
-	@Column(name = "first_name", nullable = false, length = 100)
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
     @Column(name = "last_name", nullable = false, length = 100)
@@ -71,13 +70,34 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "account_locked", nullable = false)
     private boolean accountLocked = false;
 
+    /**
+     * Counter for consecutive failed login attempts.
+     * Part of the brute force protection mechanism.
+     */
+    @Builder.Default
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts = 0;
+
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
     /**
+     * Increments the counter of failed login attempts.
+     */
+    public void incrementFailedAttempts() {
+        this.failedLoginAttempts++;
+    }
+
+    /**
+     * Resets the counter of failed login attempts to zero.
+     * Should be called after a successful login.
+     */
+    public void resetFailedAttempts() {
+        this.failedLoginAttempts = 0;
+    }
+
+    /**
      * Returns the authorities granted to the user based on their global role.
-     * 
-     * @return a list containing the user's role as a GrantedAuthority.
      */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -116,8 +136,6 @@ public class User extends BaseEntity implements UserDetails {
 
     /**
      * Helper method to get the user's full name.
-     * 
-     * @return the concatenated first and last name.
      */
     public String getFullName() {
         return firstName + " " + lastName;

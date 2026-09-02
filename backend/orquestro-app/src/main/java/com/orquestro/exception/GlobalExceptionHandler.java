@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,8 +20,7 @@ import java.util.List;
 
 /**
  * Global exception handler that intercepts and processes all exceptions thrown across the application.
- * It ensures that the client always receives a standardized JSON response (ErrorResponseDTO)
- * instead of default server error pages or stack traces.
+ * Updated to specifically handle security-related exceptions such as account locking and disabled users.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -37,7 +38,6 @@ public class GlobalExceptionHandler {
 
     /**
      * Handles validation errors from DTOs (e.g., @NotBlank, @Email).
-     * Maps each field error to a ValidationError record for frontend consumption.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDTO> handleValidationExceptions(MethodArgumentNotValidException ex, HttpServletRequest request) {
@@ -53,7 +53,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles security authentication failures specifically.
+     * Handles incorrect login credentials.
      */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponseDTO> handleBadCredentialsException(BadCredentialsException ex, HttpServletRequest request) {
@@ -61,8 +61,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles attempts to log in with a locked account (Brute Force Protection).
+     */
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ErrorResponseDTO> handleLockedException(LockedException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "This account has been locked due to multiple failed login attempts. Please contact support.", request, null);
+    }
+
+    /**
+     * Handles attempts to log in with a disabled/inactive account.
+     */
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<ErrorResponseDTO> handleDisabledException(DisabledException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "This account is currently inactive.", request, null);
+    }
+
+    /**
      * Catch-all handler for any unexpected server errors.
-     * Logs the full stack trace for internal debugging while returning a generic message to the client.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handleGenericException(Exception ex, HttpServletRequest request) {

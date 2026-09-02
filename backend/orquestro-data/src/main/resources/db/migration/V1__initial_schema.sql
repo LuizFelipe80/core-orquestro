@@ -28,6 +28,7 @@ CREATE TABLE users (
     language_id UUID NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     account_locked BOOLEAN NOT NULL DEFAULT FALSE,
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0, -- New field for Brute Force protection
     last_login_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
