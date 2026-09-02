@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Layout, Menu, Button, theme, Avatar, Dropdown, Space, Typography, Grid } from 'antd';
 import {
   MenuFoldOutlined,
@@ -12,38 +12,60 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import languageService, { LanguageResponseDTO } from '../features/languages/services/languageService';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
 /**
- * Main Layout component with Multi-language Selector.
- * Handles the application shell and provides global navigation and locale switching.
+ * Main Layout with Dynamic Language Selection.
+ * Syncs the header language dropdown with the active languages in the database.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 const MainLayout: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const screens = useBreakpoint();
+  
+  const [collapsed, setCollapsed] = useState(false);
+  const [activeLanguages, setActiveLanguages] = useState<LanguageResponseDTO[]>([]);
   
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
   /**
-   * Sidebar Menu Items - Translated dynamically using t()
+   * Fetches the list of active languages from the backend to populate the dropdown.
    */
+  const fetchActiveLanguages = useCallback(async () => {
+    try {
+      const data = await languageService.getActiveLanguages();
+      setActiveLanguages(data);
+    } catch (error) {
+      console.error('Failed to load active languages for the header selector.');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActiveLanguages();
+  }, [fetchActiveLanguages]);
+
+  /**
+   * Maps active languages to Ant Design Menu items.
+   */
+  const languageMenuItems = activeLanguages.map(lang => ({
+    key: lang.code,
+    label: lang.name,
+    onClick: () => i18n.changeLanguage(lang.code),
+    disabled: i18n.language === lang.code,
+  }));
+
   const menuItems = [
-    {
-      key: '/',
-      icon: <DashboardOutlined />,
-      label: t('menu.dashboard'),
-    },
+    { key: '/', icon: <DashboardOutlined />, label: t('menu.dashboard') },
     {
       key: '/users',
       icon: <UserOutlined />,
@@ -55,24 +77,6 @@ const MainLayout: React.FC = () => {
       icon: <GlobalOutlined />,
       label: t('menu.languages'),
       disabled: user?.globalRole === 'ROLE_USER',
-    },
-  ];
-
-  /**
-   * Language selection menu items.
-   */
-  const languageMenuItems = [
-    {
-      key: 'en',
-      label: 'English',
-      onClick: () => i18n.changeLanguage('en'),
-      disabled: i18n.language === 'en',
-    },
-    {
-      key: 'pt-BR',
-      label: 'Português',
-      onClick: () => i18n.changeLanguage('pt-BR'),
-      disabled: i18n.language === 'pt-BR',
     },
   ];
 
@@ -113,14 +117,12 @@ const MainLayout: React.FC = () => {
           />
 
           <Space size="large" style={{ paddingRight: 8 }}>
-            {/* Language Selector Dropdown */}
             <Dropdown menu={{ items: languageMenuItems }} placement="bottomRight">
               <Button type="text" icon={<TranslationOutlined />} style={{ fontSize: '16px' }}>
-                {screens.md && (i18n.language === 'en' ? 'EN' : 'PT')}
+                {screens.md && (i18n.language.toUpperCase().split('-')[0])}
               </Button>
             </Dropdown>
 
-            {/* User Menu Dropdown */}
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Space style={{ cursor: 'pointer' }}>
                 {screens.md && (

@@ -104,15 +104,17 @@ public class LanguageService {
                 .orElseThrow(() -> new BusinessException("Language not found to update.", HttpStatus.NOT_FOUND));
 
         validateUniqueness(id, request.name(), request.code());
+        boolean willBeDefault = Boolean.TRUE.equals(request.isDefault());
+        boolean willBeActive = willBeDefault || Boolean.TRUE.equals(request.active());
 
-        if (Boolean.TRUE.equals(request.isDefault()) && !Boolean.TRUE.equals(language.getIsDefault())) {
+        if (willBeDefault && !Boolean.TRUE.equals(language.getIsDefault())) {
             handleDefaultLanguageSwitch();
         }
 
         language.setName(request.name());
         language.setCode(request.code());
-        language.setActive(request.active());
-        language.setIsDefault(request.isDefault());
+        language.setActive(willBeActive);
+        language.setIsDefault(willBeDefault);
 
         return mapToResponse(languageRepository.save(language));
     }

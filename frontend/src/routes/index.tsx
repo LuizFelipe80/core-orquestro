@@ -5,6 +5,7 @@ import MainLayout from '../layout/MainLayout';
 import LoginPage from '../features/auth/pages/LoginPage';
 import UserListPage from '../features/users/pages/UserListPage';
 import { useAuth } from '../context/AuthContext';
+import LanguageListPage from '../features/languages/pages/LanguageListPage';
 
 /**
  * Main Application Routes component.
@@ -70,12 +71,7 @@ const AppRoutes: React.FC = () => {
         */}
         <Route 
           path="/languages" 
-          element={
-            <div>
-              <h3>Language Settings</h3>
-              <p>System localization and language CRUD will be implemented here.</p>
-            </div>
-          } 
+          element={<LanguageListPage />}
         />
       </Route>
 
