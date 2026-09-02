@@ -2,10 +2,15 @@
   "common": {
     "welcome": "Bem-vindo",
     "save": "Salvar",
+    "save_changes": "Salvar Alterações",
     "cancel": "Cancelar",
     "loading": "Carregando...",
     "actions": "Ações",
-    "status": "Status"
+    "status": "Status",
+    "edit": "Editar",
+    "yes": "Sim",
+    "no": "Não",
+    "delete": "Excluir"
   },
   "auth": {
     "login_title": "Orquestro",
@@ -17,7 +22,7 @@
     "password_required": "Por favor, insira sua senha",
     "sign_in_button": "Entrar",
     "welcome_back": "Bem-vindo de volta, {{name}}!",
-    "logout_success": "Logout realizado com sucesso."
+    "login_error_generic": "Falha na autenticação. Verifique suas credenciais."
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -25,5 +30,56 @@
     "languages": "Idiomas",
     "profile": "Meu Perfil",
     "sign_out": "Sair"
+  },
+  "users": {
+    "full_name": "Nome Completo",
+    "first_name": "Nome",
+    "first_name_required": "O nome é obrigatório",
+    "last_name": "Sobrenome",
+    "last_name_required": "O sobrenome é obrigatório",
+    "email": "E-mail",
+    "email_required": "E-mail é obrigatório",
+    "email_invalid": "Formato de e-mail inválido",
+    "role": "Perfil Global",
+    "role_required": "O perfil é obrigatório",
+    "language": "Idioma Preferido",
+    "language_required": "O idioma é obrigatório",
+    "status": "Ativo",
+    "status_updated": "Status do usuário atualizado.",
+    "status_error": "Falha ao atualizar status.",
+    "load_error": "Falha ao carregar usuários.",
+    "edit_user": "Editar Usuário",
+    "update_success": "Usuário atualizado com sucesso.",
+    "update_error": "Falha ao atualizar usuário.",
+    "locked_hint": "Bloqueado por política de segurança",
+    "unlock_title": "Desbloquear Conta",
+    "unlock_confirm": "Tem certeza que deseja desbloquear a conta de {{name}}?",
+    "unlock_success": "Conta desbloqueada com sucesso.",
+    "unlock_error": "Falha ao desbloquear conta.",
+    "profile_description": "Gerencie suas informações pessoais e configurações de segurança.",
+    "tab_general": "Informações Gerais",
+    "tab_security": "Segurança",
+    "current_password": "Senha Atual",
+    "current_password_required": "A senha atual é obrigatória",
+    "new_password": "Nova Senha",
+    "new_password_required": "A nova senha é obrigatória",
+    "confirm_password": "Confirmar Nova Senha",
+    "confirm_password_required": "Confirme sua nova senha",
+    "password_mismatch": "As senhas não conferem",
+    "password_too_short": "A senha deve ter pelo menos 8 caracteres",
+    "update_password": "Atualizar Senha",
+    "profile_update_success": "Perfil atualizado com sucesso.",
+    "password_update_success": "Senha alterada com sucesso."
+  },
+  "languages": {
+    "name": "Idioma",
+    "code": "Código ISO",
+    "active_status": "Disponível",
+    "set_default": "Padrão do Sistema",
+    "default_label": "Padrão",
+    "management_hint": "Habilite idiomas pré-configurados. O idioma padrão é forçado como ativo.",
+    "load_error": "Falha ao carregar configurações de idioma.",
+    "update_success": "Configurações de idioma atualizadas.",
+    "update_error": "Falha ao atualizar idioma."
   }
 }

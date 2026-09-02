@@ -4,6 +4,24 @@
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
+
+/**
+ * Interface for users to update their own basic profile information.
+ */
+export interface UserProfileUpdateDTO {
+  firstName: string;
+  lastName: string;
+  languageId: string;
+}
+
+/**
+ * Interface for secure password change operations.
+ */
+export interface PasswordChangeRequestDTO {
+  currentPassword?: string;
+  newPassword?: string;
+}
+
 export interface UserResponseDTO {
   id: string;
   firstName: string;

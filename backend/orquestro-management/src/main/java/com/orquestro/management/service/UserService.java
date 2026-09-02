@@ -13,6 +13,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.orquestro.management.dto.request.PasswordChangeRequestDTO;
+import com.orquestro.management.dto.request.UserProfileUpdateDTO;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.UUID;
 
@@ -137,6 +141,71 @@ public class UserService {
         user.setAccountLocked(false);
         user.resetFailedAttempts();
         
+        userRepository.save(user);
+    }
+    
+    private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Retrieves the profile information of the currently authenticated user.
+     * 
+     * @return the current user's data as a DTO.
+     */
+    @Transactional(readOnly = true)
+    public UserResponseDTO getCurrentUserProfile() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User session not found.", HttpStatus.UNAUTHORIZED));
+        
+        return mapToResponse(user);
+    }
+
+    /**
+     * Updates the profile of the currently authenticated user.
+     * Users can only update their names and preferred language.
+     * 
+     * @param request the update data.
+     * @return the updated user data as a DTO.
+     */
+    @Transactional
+    public UserResponseDTO updateCurrentUserProfile(UserProfileUpdateDTO request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User session not found.", HttpStatus.UNAUTHORIZED));
+
+        Language language = languageRepository.findById(request.languageId())
+                .orElseThrow(() -> new BusinessException("Selected language not found.", HttpStatus.BAD_REQUEST));
+
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setLanguage(language);
+
+        return mapToResponse(userRepository.save(user));
+    }
+
+    /**
+     * Securely changes the authenticated user's password.
+     * Validates the current password before applying the new one.
+     * 
+     * @param request the current and new password data.
+     */
+    @Transactional
+    public void changePassword(PasswordChangeRequestDTO request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User session not found.", HttpStatus.UNAUTHORIZED));
+
+        /* Identity Verification: Check if current password matches */
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new BusinessException("The current password provided is incorrect.", HttpStatus.UNAUTHORIZED);
+        }
+
+        /* Prevent reuse of the same password if desired (Business Rule) */
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new BusinessException("The new password cannot be the same as the current one.", HttpStatus.BAD_REQUEST);
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
     }
 }

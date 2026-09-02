@@ -6,6 +6,7 @@ import LoginPage from '../features/auth/pages/LoginPage';
 import UserListPage from '../features/users/pages/UserListPage';
 import { useAuth } from '../context/AuthContext';
 import LanguageListPage from '../features/languages/pages/LanguageListPage';
+import ProfilePage from '../features/users/pages/ProfilePage';
 
 /**
  * Main Application Routes component.
@@ -72,6 +73,11 @@ const AppRoutes: React.FC = () => {
         <Route 
           path="/languages" 
           element={<LanguageListPage />}
+        />
+        
+        <Route 
+          path="/profile" 
+          element={<ProfilePage />} 
         />
       </Route>
 

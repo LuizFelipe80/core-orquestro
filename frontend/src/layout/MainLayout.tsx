@@ -81,7 +81,12 @@ const MainLayout: React.FC = () => {
   ];
 
   const userMenuItems = [
-    { key: 'profile', label: t('menu.profile'), icon: <UserOutlined /> },
+    { 
+      key: 'profile', 
+      label: t('menu.profile'), 
+      icon: <UserOutlined />, 
+      onClick: () => navigate('/profile') 
+    },
     { type: 'divider' as const },
     {
       key: 'logout',

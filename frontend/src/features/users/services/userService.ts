@@ -1,5 +1,5 @@
 import api from '../../../api/axios';
-import { UserResponseDTO, UserUpdateDTO, PaginatedResponse } from '../types/userTypes';
+import { UserResponseDTO, UserUpdateDTO, PaginatedResponse, UserProfileUpdateDTO, PasswordChangeRequestDTO } from '../types/userTypes';
 
 /**
  * Service responsible for user-related API calls.
@@ -18,11 +18,7 @@ const userService = {
    */
   getUsers: async (page = 0, size = 20): Promise<PaginatedResponse<UserResponseDTO>> => {
     const response = await api.get<PaginatedResponse<UserResponseDTO>>('/users', {
-      params: { 
-        page, 
-        size, 
-        sort: 'firstName,asc' 
-      }
+      params: { page, size, sort: 'firstName,asc' }
     });
     return response.data;
   },
@@ -68,6 +64,31 @@ const userService = {
    */
   unlockUser: async (id: string): Promise<void> => {
     await api.patch(`/users/${id}/unlock`);
+  },
+
+  /* Self-Service Methods (Authenticated User) */
+  
+  /**
+   * Fetches the profile of the currently logged-in user.
+   */
+  getMyProfile: async (): Promise<UserResponseDTO> => {
+    const response = await api.get<UserResponseDTO>('/users/me');
+    return response.data;
+  },
+
+  /**
+   * Updates the current user's profile names and language.
+   */
+  updateMyProfile: async (data: UserProfileUpdateDTO): Promise<UserResponseDTO> => {
+    const response = await api.put<UserResponseDTO>('/users/me', data);
+    return response.data;
+  },
+
+  /**
+   * Changes the current user's password.
+   */
+  changeMyPassword: async (data: PasswordChangeRequestDTO): Promise<void> => {
+    await api.patch('/users/me/password', data);
   }
 };
 
