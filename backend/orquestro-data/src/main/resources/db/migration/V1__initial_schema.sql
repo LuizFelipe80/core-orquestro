@@ -50,7 +50,38 @@ CREATE TABLE user_sessions (
     CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
--- 4. Seed Data: Initial Languages
+-- 4. Create table 'module_roles'
+-- This table stores roles specific to the business domain of the current project.
+CREATE TABLE module_roles (
+    id UUID PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
+    version BIGINT DEFAULT 0
+);
+
+-- 5. Create table 'user_module_access'
+-- This is the junction table that links users to their specific module roles.
+CREATE TABLE user_module_access (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    module_role_id UUID NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP,
+    version BIGINT DEFAULT 0,
+    
+    -- Foreign Key Constraints
+    CONSTRAINT fk_access_user FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT fk_access_module_role FOREIGN KEY (module_role_id) REFERENCES module_roles (id),
+    
+    -- Unique Constraint to prevent duplicate role assignments for the same user
+    CONSTRAINT uk_user_module_role UNIQUE (user_id, module_role_id)
+);
+
+-- 6. Seed Data: Initial Languages
 -- English (Default)
 INSERT INTO languages (id, name, code, active, is_default, created_at, version)
 VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'English', 'en', TRUE, TRUE, NOW(), 0);
@@ -59,7 +90,7 @@ VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'English', 'en', TRUE, TRUE, NOW
 INSERT INTO languages (id, name, code, active, is_default, created_at, version)
 VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Português', 'pt-BR', TRUE, FALSE, NOW(), 0);
 
--- 5. Seed Data: Initial Users
+-- 7. Seed Data: Initial Users
 -- Password for all seed users: password123
 -- BCrypt hash: $2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DM99Xo7N95S.
 
