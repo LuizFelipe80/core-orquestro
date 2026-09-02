@@ -3,12 +3,15 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute, PublicRoute } from './RouteGuards';
 import MainLayout from '../layout/MainLayout';
 import LoginPage from '../features/auth/pages/LoginPage';
+import UserListPage from '../features/users/pages/UserListPage';
 import { useAuth } from '../context/AuthContext';
 
 /**
  * Main Application Routes component.
- * Organizes the routing tree using nested routes for the main layout
- * and applies security guards to prevent unauthorized access.
+ * 
+ * Defines the navigation tree of the Orquestro platform.
+ * It manages the transition between the public authentication area and the 
+ * protected administrative area, applying the appropriate route guards.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -17,7 +20,12 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* 1. Public Routes: Accessible only when NOT authenticated */}
+      {/* 
+          1. Public Routes Area 
+          Routes accessible only to users who are NOT authenticated.
+          If an authenticated user tries to access /login, the PublicRoute 
+          guard will redirect them to the home page.
+      */}
       <Route 
         path="/login" 
         element={
@@ -27,8 +35,12 @@ const AppRoutes: React.FC = () => {
         } 
       />
 
-      {/* 2. Protected Routes: Accessible only when authenticated */}
-      {/* The MainLayout acts as a parent for all internal pages */}
+      {/* 
+          2. Protected Application Shell 
+          The MainLayout acts as a master wrapper for all internal pages.
+          The ProtectedRoute guard ensures the entire tree is inaccessible 
+          without a valid session.
+      */}
       <Route 
         element={
           <ProtectedRoute>
@@ -36,7 +48,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        {/* Dashboard / Home */}
+        {/* Dashboard / Home View */}
         <Route 
           path="/" 
           element={
@@ -47,18 +59,15 @@ const AppRoutes: React.FC = () => {
           } 
         />
 
-        {/* User Management Placeholder */}
+        {/* User Management Module */}
         <Route 
           path="/users" 
-          element={
-            <div>
-              <h3>User Management</h3>
-              <p>The user list and management features will be implemented here.</p>
-            </div>
-          } 
+          element={<UserListPage />} 
         />
 
-        {/* Languages Placeholder */}
+        {/* Languages Settings Placeholder 
+            Note: This will be replaced by the LanguageListPage in the next steps.
+        */}
         <Route 
           path="/languages" 
           element={
@@ -70,7 +79,11 @@ const AppRoutes: React.FC = () => {
         />
       </Route>
 
-      {/* 3. Fallback: Redirect any unknown route to home */}
+      {/* 
+          3. Global Fallback 
+          Captures any undefined URLs and redirects the user to the home page,
+          maintaining application consistency.
+      */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
