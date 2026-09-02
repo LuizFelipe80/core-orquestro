@@ -28,6 +28,7 @@ public record UserResponseDTO(
     String email,
     String globalRole,
     boolean active,
+    boolean accountLocked,
     LocalDateTime lastLoginAt,
     LocalDateTime createdAt,
     LanguageSummaryDTO language

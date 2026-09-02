@@ -111,6 +111,7 @@ public class UserService {
                 .email(user.getEmail())
                 .globalRole(user.getGlobalRole().name())
                 .active(user.isActive())
+                .accountLocked(user.isAccountLocked())
                 .lastLoginAt(user.getLastLoginAt())
                 .createdAt(user.getCreatedAt())
                 .language(new UserResponseDTO.LanguageSummaryDTO(
@@ -119,5 +120,23 @@ public class UserService {
                         user.getLanguage().getCode()
                 ))
                 .build();
+    }
+    
+    /**
+     * Unlocks a user account that was previously locked due to brute force protection.
+     * Resets both the locked flag and the failed attempts counter.
+     * 
+     * @param id the unique identifier of the user to unlock.
+     * @throws BusinessException if the user is not found.
+     */
+    @Transactional
+    public void unlockAccount(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("User not found to unlock.", HttpStatus.NOT_FOUND));
+        
+        user.setAccountLocked(false);
+        user.resetFailedAttempts();
+        
+        userRepository.save(user);
     }
 }

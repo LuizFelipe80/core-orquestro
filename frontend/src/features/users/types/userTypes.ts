@@ -11,6 +11,7 @@ export interface UserResponseDTO {
   email: string;
   globalRole: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_USER';
   active: boolean;
+  accountLocked: boolean;
   lastLoginAt: string | null;
   createdAt: string;
   language: {

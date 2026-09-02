@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Table, Tag, Switch, Space, Typography, Card, Button, App as AntdApp } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { Table, Tag, Switch, Space, Typography, Card, Button, Tooltip, App as AntdApp } from 'antd';
+import { EditOutlined, UnlockOutlined, LockOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';
 import { UserResponseDTO } from '../types/userTypes';
@@ -10,30 +10,24 @@ import UserEditModal from '../components/UserEditModal';
 const { Title } = Typography;
 
 /**
- * User List Page Component.
- * Displays a paginated table of users and manages the lifecycle 
- * of user editing and status toggling.
+ * Enhanced User List Page with security management.
+ * Provides visual indicators for locked accounts and administrative unlock actions.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 const UserListPage: React.FC = () => {
   const { t } = useTranslation();
-  const { message } = AntdApp.useApp();
+  const { message, modal } = AntdApp.useApp();
   
-  /* State for data and pagination */
   const [users, setUsers] = useState<UserResponseDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  /* State for Edit Modal */
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserResponseDTO | null>(null);
 
-  /**
-   * Fetches the paginated user list from the service layer.
-   */
   const loadUsers = useCallback(async (page: number) => {
     setLoading(true);
     try {
@@ -51,51 +45,51 @@ const UserListPage: React.FC = () => {
     loadUsers(currentPage);
   }, [loadUsers, currentPage]);
 
-  /**
-   * Opens the edit modal for a specific user.
-   */
-  const handleEditClick = (user: UserResponseDTO) => {
-    setSelectedUser(user);
-    setIsEditModalOpen(true);
-  };
-
-  /**
-   * Closes the modal and clears the selection.
-   */
-  const handleModalClose = () => {
-    setIsEditModalOpen(false);
-    setSelectedUser(null);
-  };
-
-  /**
-   * Refreshes the list and closes the modal after a successful update.
-   */
-  const handleModalSuccess = () => {
-    handleModalClose();
-    loadUsers(currentPage);
-  };
-
-  /**
-   * Handles the activation/deactivation of a user account.
-   */
   const handleToggleStatus = async (id: string) => {
     try {
       await userService.toggleUserStatus(id);
-      message.success(t('users.status_updated') || 'User status updated successfully.');
+      message.success(t('users.status_updated'));
       loadUsers(currentPage);
     } catch (error: any) {
-      message.error(t('users.status_error') || 'Failed to update user status.');
+      message.error(t('users.status_error'));
     }
   };
 
   /**
-   * Table columns definition including the new Actions column.
+   * Handles the account unlock process with a confirmation dialog.
    */
+  const handleUnlock = (user: UserResponseDTO) => {
+    modal.confirm({
+      title: t('users.unlock_title') || 'Unlock Account',
+      content: t('users.unlock_confirm', { name: user.firstName }) || `Are you sure you want to unlock ${user.firstName}'s account?`,
+      okText: t('Procced') || 'Yes',
+      cancelText: t('Cancel') || 'No',
+      onOk: async () => {
+        try {
+          await userService.unlockUser(user.id);
+          message.success(t('users.unlock_success') || 'Account successfully unlocked.');
+          loadUsers(currentPage);
+        } catch (error: any) {
+          message.error(t('users.unlock_error') || 'Failed to unlock account.');
+        }
+      },
+    });
+  };
+
   const columns: ColumnsType<UserResponseDTO> = [
     {
       title: t('users.full_name') || 'Name',
       key: 'name',
-      render: (_, record) => `${record.firstName} ${record.lastName}`,
+      render: (_, record) => (
+        <Space>
+          {`${record.firstName} ${record.lastName}`}
+          {record.accountLocked && (
+            <Tooltip title={t('users.locked_hint') || 'Locked by brute force protection'}>
+              <Tag color="error" icon={<LockOutlined />}>LOCKED</Tag>
+            </Tooltip>
+          )}
+        </Space>
+      ),
     },
     {
       title: t('users.email') || 'Email',
@@ -110,8 +104,7 @@ const UserListPage: React.FC = () => {
         let color = 'default';
         if (role === 'ROLE_ADMIN') color = 'blue';
         if (role === 'ROLE_MANAGER') color = 'cyan';
-        const label = role.replace('ROLE_', '');
-        return <Tag color={color}>{label}</Tag>;
+        return <Tag color={color}>{role.replace('ROLE_', '')}</Tag>;
       },
     },
     {
@@ -130,14 +123,28 @@ const UserListPage: React.FC = () => {
       title: t('common.actions') || 'Actions',
       key: 'actions',
       fixed: 'right',
-      width: 100,
+      width: 120,
       render: (_, record) => (
-        <Button 
-          type="text" 
-          icon={<EditOutlined />} 
-          onClick={() => handleEditClick(record)}
-          title={t('common.edit') || 'Edit'}
-        />
+        <Space size="middle">
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => {
+              setSelectedUser(record);
+              setIsEditModalOpen(true);
+            }}
+          />
+          {record.accountLocked && (
+            <Tooltip title={t('users.unlock_action') || 'Unlock Account'}>
+              <Button 
+                type="text" 
+                danger
+                icon={<UnlockOutlined />} 
+                onClick={() => handleUnlock(record)}
+              />
+            </Tooltip>
+          )}
+        </Space>
       ),
     },
   ];
@@ -145,9 +152,7 @@ const UserListPage: React.FC = () => {
   return (
     <Space direction="vertical" size="large" style={{ display: 'flex' }}>
       <Card bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-        <Title level={4} style={{ margin: 0 }}>
-          {t('menu.users') || 'Users Management'}
-        </Title>
+        <Title level={4} style={{ margin: 0 }}>{t('menu.users')}</Title>
       </Card>
 
       <Table
@@ -157,11 +162,9 @@ const UserListPage: React.FC = () => {
         loading={loading}
         pagination={{
           current: currentPage,
-          pageSize: pageSize,
           total: totalElements,
           onChange: (page) => setCurrentPage(page),
           showSizeChanger: false,
-          position: ['bottomRight']
         }}
         scroll={{ x: 1000 }}
       />
@@ -169,8 +172,15 @@ const UserListPage: React.FC = () => {
       <UserEditModal 
         open={isEditModalOpen}
         user={selectedUser}
-        onClose={handleModalClose}
-        onSuccess={handleModalSuccess}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedUser(null);
+        }}
+        onSuccess={() => {
+          setIsEditModalOpen(false);
+          setSelectedUser(null);
+          loadUsers(currentPage);
+        }}
       />
     </Space>
   );

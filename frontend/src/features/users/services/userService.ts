@@ -58,6 +58,16 @@ const userService = {
    */
   toggleUserStatus: async (id: string): Promise<void> => {
     await api.patch(`/users/${id}/status`);
+  },
+
+  /**
+   * Unlocks a user account that was blocked by brute force protection.
+   * 
+   * @param id The unique identifier of the user to unlock.
+   * @returns A promise that resolves when the operation is complete.
+   */
+  unlockUser: async (id: string): Promise<void> => {
+    await api.patch(`/users/${id}/unlock`);
   }
 };
 

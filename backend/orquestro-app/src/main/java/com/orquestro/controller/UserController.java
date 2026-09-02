@@ -22,7 +22,7 @@ import java.util.UUID;
 
 /**
  * REST controller for administrative user management operations.
- * Provides endpoints for listing, viewing, updating, and toggling user accounts.
+ * Provides endpoints for listing, viewing, updating, and managing account security status.
  * Access is restricted to users with ADMIN or MANAGER global roles.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
@@ -37,10 +37,9 @@ public class UserController {
 
     /**
      * Retrieves a paginated list of all users.
-     * Uses @PageableDefault to provide sensible defaults for sorting and size.
      * 
-     * @param pageable pagination and sorting information from the request.
-     * @return a ResponseEntity containing a page of UserResponseDTOs.
+     * @param pageable pagination and sorting information.
+     * @return a page of UserResponseDTOs.
      */
     @GetMapping
     public ResponseEntity<Page<UserResponseDTO>> getAllUsers(
@@ -53,7 +52,7 @@ public class UserController {
      * Retrieves detailed information about a specific user.
      * 
      * @param id the unique identifier of the user.
-     * @return a ResponseEntity containing the UserResponseDTO.
+     * @return the UserResponseDTO.
      */
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable UUID id) {
@@ -63,9 +62,9 @@ public class UserController {
     /**
      * Updates an existing user's profile information.
      * 
-     * @param id the unique identifier of the user to update.
-     * @param request the updated user data.
-     * @return a ResponseEntity containing the updated UserResponseDTO.
+     * @param id the user UUID.
+     * @param request the update payload.
+     * @return the updated UserResponseDTO.
      */
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDTO> updateUser(
@@ -76,15 +75,27 @@ public class UserController {
     }
 
     /**
-     * Toggles the active/inactive status of a user account.
-     * Useful for disabling access without deleting historical data.
+     * Toggles the active status of a user account.
      * 
-     * @param id the unique identifier of the user.
-     * @return a ResponseEntity with no content (204).
+     * @param id the user UUID.
+     * @return 204 No Content.
      */
     @PatchMapping("/{id}/status")
     public ResponseEntity<Void> toggleUserStatus(@PathVariable UUID id) {
         userService.toggleActiveStatus(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Unlocks a user account that was blocked by brute force protection.
+     * Resets both the locked flag and the failed attempts counter.
+     * 
+     * @param id the user UUID.
+     * @return 204 No Content.
+     */
+    @PatchMapping("/{id}/unlock")
+    public ResponseEntity<Void> unlockUser(@PathVariable UUID id) {
+        userService.unlockAccount(id);
         return ResponseEntity.noContent().build();
     }
 }
