@@ -1,0 +1,29 @@
+{
+  "common": {
+    "welcome": "Bem-vindo",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "loading": "Carregando...",
+    "actions": "Ações",
+    "status": "Status"
+  },
+  "auth": {
+    "login_title": "Orquestro",
+    "login_subtitle": "Fundação de Plataforma de Gestão",
+    "email_label": "E-mail",
+    "email_required": "Por favor, insira seu e-mail",
+    "email_invalid": "Por favor, insira um e-mail válido",
+    "password_label": "Senha",
+    "password_required": "Por favor, insira sua senha",
+    "sign_in_button": "Entrar",
+    "welcome_back": "Bem-vindo de volta, {{name}}!",
+    "logout_success": "Logout realizado com sucesso."
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "users": "Gestão de Usuários",
+    "languages": "Idiomas",
+    "profile": "Meu Perfil",
+    "sign_out": "Sair"
+  }
+}

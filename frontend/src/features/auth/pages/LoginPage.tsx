@@ -1,36 +1,31 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Card, Typography, App as AntdApp } from 'antd';
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../context/AuthContext';
 
 const { Title, Text } = Typography;
 
 /**
- * Login Page Component.
- * Provides a specialized interface for user authentication.
- * Integrates with AuthContext to handle the sign-in process and manages local loading states.
+ * Login Page Component with Internationalization support.
+ * Uses i18next to provide localized labels and messages.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const { message } = AntdApp.useApp();
 
-  /**
-   * Handles the form submission.
-   * On success, the user is redirected by the AuthProvider logic or subsequent route guards.
-   * 
-   * @param values The form values containing email and password.
-   */
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
       await signIn(values);
-      message.success('Welcome to Orquestro!');
+      // t('auth.welcome_back') uses interpolation
+      message.success(t('auth.welcome_back', { name: values.email }));
     } catch (error: any) {
-      // Extracts the error message from our backend's ErrorResponseDTO
-      const errorMessage = error.response?.data?.message || 'Failed to authenticate. Please check your credentials.';
+      const errorMessage = error.response?.data?.message || t('auth.login_error_generic');
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -45,55 +40,33 @@ const LoginPage: React.FC = () => {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #102a43 0%, #243b53 100%)'
     }}>
-      <Card 
-        style={{ width: '100%', maxWidth: 400, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-        bordered={false}
-      >
+      <Card style={{ width: '100%', maxWidth: 400, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} bordered={false}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <Title level={2} style={{ margin: 0, color: '#102a43' }}>Orquestro</Title>
-          <Text type="secondary">Management Platform Foundation</Text>
+          <Title level={2} style={{ margin: 0, color: '#102a43' }}>{t('auth.login_title')}</Title>
+          <Text type="secondary">{t('auth.login_subtitle')}</Text>
         </div>
 
-        <Form
-          name="login_form"
-          layout="vertical"
-          initialValues={{ remember: true }}
-          onFinish={onFinish}
-          autoComplete="off"
-          size="large"
-        >
+        <Form name="login_form" layout="vertical" onFinish={onFinish} size="large">
           <Form.Item
             name="email"
             rules={[
-              { required: true, message: 'Please enter your email' },
-              { type: 'email', message: 'Please enter a valid email address' }
+              { required: true, message: t('auth.email_required') },
+              { type: 'email', message: t('auth.email_invalid') }
             ]}
           >
-            <Input 
-              prefix={<MailOutlined style={{ color: 'rgba(0,0,0,.25)' }} />} 
-              placeholder="Email" 
-            />
+            <Input prefix={<MailOutlined />} placeholder={t('auth.email_label')} />
           </Form.Item>
 
           <Form.Item
             name="password"
-            rules={[{ required: true, message: 'Please enter your password' }]}
+            rules={[{ required: true, message: t('auth.password_required') }]}
           >
-            <Input.Password
-              prefix={<LockOutlined style={{ color: 'rgba(0,0,0,.25)' }} />}
-              placeholder="Password"
-            />
+            <Input.Password prefix={<LockOutlined />} placeholder={t('auth.password_label')} />
           </Form.Item>
 
           <Form.Item>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              loading={loading} 
-              block
-              style={{ height: 45, fontSize: 16 }}
-            >
-              Sign In
+            <Button type="primary" htmlType="submit" loading={loading} block style={{ height: 45 }}>
+              {t('auth.sign_in_button')}
             </Button>
           </Form.Item>
         </Form>

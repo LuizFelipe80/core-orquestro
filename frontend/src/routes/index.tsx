@@ -1,12 +1,14 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute, PublicRoute } from './RouteGuards';
+import MainLayout from '../layout/MainLayout';
 import LoginPage from '../features/auth/pages/LoginPage';
 import { useAuth } from '../context/AuthContext';
 
 /**
  * Main Application Routes component.
- * Defines the navigation tree and applies security guards to specific paths.
+ * Organizes the routing tree using nested routes for the main layout
+ * and applies security guards to prevent unauthorized access.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -15,7 +17,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* Public Routes: Accessible only when NOT authenticated */}
+      {/* 1. Public Routes: Accessible only when NOT authenticated */}
       <Route 
         path="/login" 
         element={
@@ -25,22 +27,50 @@ const AppRoutes: React.FC = () => {
         } 
       />
 
-      {/* Protected Routes: Accessible only when authenticated */}
+      {/* 2. Protected Routes: Accessible only when authenticated */}
+      {/* The MainLayout acts as a parent for all internal pages */}
       <Route 
-        path="/" 
         element={
           <ProtectedRoute>
-            <div style={{ padding: '24px' }}>
-              <h1>Dashboard Placeholder</h1>
-              <p>Welcome, {user?.fullName}!</p>
-              <p>Role: {user?.globalRole}</p>
-              <button onClick={() => window.location.reload()}>Reload to test Auth State</button>
-            </div>
+            <MainLayout />
           </ProtectedRoute>
-        } 
-      />
+        }
+      >
+        {/* Dashboard / Home */}
+        <Route 
+          path="/" 
+          element={
+            <div style={{ textAlign: 'center', paddingTop: '50px' }}>
+              <h2>Welcome back, {user?.fullName}!</h2>
+              <p>You are logged in as a <strong>{user?.globalRole}</strong>.</p>
+            </div>
+          } 
+        />
 
-      {/* Fallback: Redirect any unknown route to home */}
+        {/* User Management Placeholder */}
+        <Route 
+          path="/users" 
+          element={
+            <div>
+              <h3>User Management</h3>
+              <p>The user list and management features will be implemented here.</p>
+            </div>
+          } 
+        />
+
+        {/* Languages Placeholder */}
+        <Route 
+          path="/languages" 
+          element={
+            <div>
+              <h3>Language Settings</h3>
+              <p>System localization and language CRUD will be implemented here.</p>
+            </div>
+          } 
+        />
+      </Route>
+
+      {/* 3. Fallback: Redirect any unknown route to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
