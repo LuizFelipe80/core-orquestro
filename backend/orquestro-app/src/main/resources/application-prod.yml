@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    # O Spring buscará a URL, USER e PASS das variáveis de ambiente do SO
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+application:
+  security:
+    jwt:
+      # A chave mestra de produção nunca fica no código
+      secret-key: ${JWT_SECRET_KEY}
+      expiration: 3600000 # Reduzimos para 1h em produção por segurança
+      refresh-token-expiration: 259200000 # 3 days
+
+logging:
+  level:
+    root: INFO
+    com.orquestro: WARN

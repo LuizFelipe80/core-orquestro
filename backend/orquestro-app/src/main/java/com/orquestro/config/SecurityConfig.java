@@ -55,8 +55,18 @@ public class SecurityConfig {
             /* Defines access rules for HTTP requests */
             .authorizeHttpRequests(auth -> auth
                 /* Public endpoints for authentication and initial setup */
-            		.requestMatchers("/auth/authenticate", "/auth/refresh", "/auth/logout").permitAll()
-                .requestMatchers("/auth/register").hasRole("ADMIN")
+            		.requestMatchers(
+            				"/auth/authenticate", 
+            		        "/auth/refresh", 
+            		        "/auth/logout",
+            		        "/v3/api-docs/**",
+            		        "/swagger-ui/**",
+            		        "/swagger-ui.html",
+            		        "/actuator/health/**"
+            		    ).permitAll()
+            		    
+            		    /* Administrative endpoints */
+            		    .requestMatchers("/auth/register").hasRole("ADMINISTRATOR")
                 /* All other requests must be authenticated */
                 .anyRequest().authenticated()
             )

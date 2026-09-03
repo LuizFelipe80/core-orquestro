@@ -30,7 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/module-roles")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+@PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
 public class ModuleRoleController {
 
     private final ModuleRoleService moduleRoleService;
