@@ -3,16 +3,18 @@ import api from '../api/axios';
 
 /**
  * Interface representing the user data stored in the authentication state.
+ * Updated to support multiple roles as part of the indirect RBAC model.
  */
 interface User {
   id: string;
   email: string;
   fullName: string;
-  globalRole: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_USER';
+  roles: string[];
 }
 
 /**
  * Interface for the sign-in response from the backend.
+ * Matches the updated AuthenticationResponseDTO.
  */
 interface AuthResponse {
   accessToken: string;
@@ -20,7 +22,7 @@ interface AuthResponse {
   userId: string;
   email: string;
   fullName: string;
-  globalRole: string;
+  roles: string[];
 }
 
 /**
@@ -32,22 +34,24 @@ interface AuthContextData {
   signIn(credentials: object): Promise<void>;
   signOut(): void;
   isAuthenticated: boolean;
+  hasRole(roleName: string): boolean;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 /**
- * Provider component that wraps the application to provide authentication state.
- * It handles the initial token check and defines sign-in/sign-out logic.
+ * Provider component that manages the global authentication state.
+ * Handles persistence, token storage, and session lifecycle.
  * 
  * @param children React components to be wrapped.
+ * @author L.F. Desenvolvimento de Softwares LTDA
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   /**
-   * Effect to check for existing credentials in localStorage upon application start.
+   * Loads the session data from local storage on application startup.
    */
   useEffect(() => {
     const loadStorageData = () => {
@@ -64,9 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   /**
-   * Authenticates the user with the backend and stores the session tokens.
+   * Authenticates the user and initializes the secure session.
    * 
-   * @param credentials Email and password object.
+   * @param credentials The user's login data.
    */
   const signIn = useCallback(async (credentials: object) => {
     const response = await api.post<AuthResponse>('/auth/authenticate', credentials);
@@ -76,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: userData.userId,
       email: userData.email,
       fullName: userData.fullName,
-      globalRole: userData.globalRole as User['globalRole'],
+      roles: userData.roles,
     };
 
     localStorage.setItem('@Orquestro:accessToken', accessToken);
@@ -87,14 +91,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   /**
-   * Clears the user session and removes tokens from storage.
+   * Clears the current session and notifies the backend.
    */
   const signOut = useCallback(() => {
     const refreshToken = localStorage.getItem('@Orquestro:refreshToken');
     
-    // Attempt to notify backend of logout (fire and forget)
     if (refreshToken) {
-      api.post('/auth/logout', { refreshToken }).catch(() => {});
+      api.post('/auth/logout', { refreshToken }).catch(() => {
+        console.warn('Logout notification to backend failed, proceeding with local cleanup.');
+      });
     }
 
     localStorage.removeItem('@Orquestro:accessToken');
@@ -103,13 +108,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   }, []);
 
+  /**
+   * Helper method to check if the current user possesses a specific role.
+   * 
+   * @param roleName The name of the role to check (e.g., 'ADMINISTRATOR').
+   * @returns true if the user has the role assigned.
+   */
+  const hasRole = useCallback((roleName: string) => {
+    return user?.roles.includes(roleName) || false;
+  }, [user]);
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       loading, 
       signIn, 
       signOut, 
-      isAuthenticated: !!user 
+      isAuthenticated: !!user,
+      hasRole
     }}>
       {children}
     </AuthContext.Provider>
@@ -117,9 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 /**
- * Custom hook to easily access the authentication context.
- * 
- * @returns The authentication context data.
+ * Hook to access the authentication state and methods.
  */
 export const useAuth = () => {
   const context = useContext(AuthContext);

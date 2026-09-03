@@ -1,18 +1,19 @@
 package com.orquestro.management.dto.response;
 
 import lombok.Builder;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * Data Transfer Object representing a successful authentication response.
- * Updated to include the refresh token for session rotation.
+ * Updated to support multiple roles and the indirect RBAC model.
  * 
  * @param accessToken The short-lived JWT token.
  * @param refreshToken The long-lived token used to renew access.
  * @param userId The unique identifier of the authenticated user.
  * @param email The user's email address.
  * @param fullName The user's concatenated first and last name.
- * @param globalRole The user's global role.
+ * @param roles A set of high-level UserRole names assigned to the user.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -23,6 +24,6 @@ public record AuthenticationResponseDTO(
     UUID userId,
     String email,
     String fullName,
-    String globalRole
+    Set<String> roles
 ) {
 }

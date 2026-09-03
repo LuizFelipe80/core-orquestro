@@ -2,21 +2,23 @@ package com.orquestro.management.dto.response;
 
 import lombok.Builder;
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Data Transfer Object representing a detailed user profile for management purposes.
- * Provides a comprehensive view of the user's identity, role, and system preferences.
+ * Data Transfer Object representing a detailed user profile.
+ * Updated to support multiple UserRoles as part of the flexible RBAC model.
  * 
  * @param id The unique identifier of the user.
  * @param firstName The user's first name.
  * @param lastName The user's last name.
  * @param email The user's email address.
- * @param globalRole The administrative role assigned to the user.
+ * @param roles A set of role names assigned to the user (e.g., ADMINISTRATOR, MANAGER).
  * @param active Indicates if the account is currently enabled.
- * @param lastLoginAt The last time the user successfully authenticated.
- * @param createdAt The date and time the account was created.
- * @param language The user's preferred language details.
+ * @param accountLocked Indicates if the account is blocked due to security policies.
+ * @param lastLoginAt The last successful authentication timestamp.
+ * @param createdAt The account creation timestamp.
+ * @param language The user's preferred language summary.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -26,7 +28,7 @@ public record UserResponseDTO(
     String firstName,
     String lastName,
     String email,
-    String globalRole,
+    Set<String> roles,
     boolean active,
     boolean accountLocked,
     LocalDateTime lastLoginAt,

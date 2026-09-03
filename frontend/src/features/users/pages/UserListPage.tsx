@@ -16,9 +16,9 @@ import UserCreateModal from '../components/UserCreateModal';
 const { Title } = Typography;
 
 /**
- * Complete User Management Page.
- * Handles the full lifecycle of users including listing, creation, 
- * editing, and security status management (locking/unlocking).
+ * Enhanced User List Page supporting multiple roles (Indirect RBAC).
+ * Displays user information with a collection of role tags and provides 
+ * administrative actions for account management and security.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -26,20 +26,18 @@ const UserListPage: React.FC = () => {
   const { t } = useTranslation();
   const { message, modal } = AntdApp.useApp();
   
-  /* Pagination and Data State */
   const [users, setUsers] = useState<UserResponseDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  /* Modals State */
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserResponseDTO | null>(null);
 
   /**
-   * Fetches the paginated user list.
+   * Loads the paginated user data from the backend.
    */
   const loadUsers = useCallback(async (page: number) => {
     setLoading(true);
@@ -59,7 +57,7 @@ const UserListPage: React.FC = () => {
   }, [loadUsers, currentPage]);
 
   /**
-   * Handles user activation toggle.
+   * Toggles the active status of a user.
    */
   const handleToggleStatus = async (id: string) => {
     try {
@@ -72,7 +70,7 @@ const UserListPage: React.FC = () => {
   };
 
   /**
-   * Handles administrative account unlocking.
+   * Triggers the account unlock confirmation and process.
    */
   const handleUnlock = (user: UserResponseDTO) => {
     modal.confirm({
@@ -93,7 +91,7 @@ const UserListPage: React.FC = () => {
   };
 
   /**
-   * Table Columns Definition
+   * Column definitions for the Ant Design Table.
    */
   const columns: ColumnsType<UserResponseDTO> = [
     {
@@ -117,14 +115,18 @@ const UserListPage: React.FC = () => {
     },
     {
       title: t('users.role'),
-      dataIndex: 'globalRole',
-      key: 'role',
-      render: (role: string) => {
-        let color = 'default';
-        if (role === 'ROLE_ADMIN') color = 'blue';
-        if (role === 'ROLE_MANAGER') color = 'cyan';
-        return <Tag color={color}>{role.replace('ROLE_', '')}</Tag>;
-      },
+      dataIndex: 'roles',
+      key: 'roles',
+      render: (roles: string[]) => (
+        <Space size={[0, 4]} wrap>
+          {roles.map(role => {
+            let color = 'default';
+            if (role === 'ADMINISTRATOR') color = 'blue';
+            if (role === 'MANAGER') color = 'cyan';
+            return <Tag color={color} key={role}>{role}</Tag>;
+          })}
+        </Space>
+      ),
     },
     {
       title: t('users.status'),
@@ -197,7 +199,6 @@ const UserListPage: React.FC = () => {
         scroll={{ x: 1000 }}
       />
 
-      {/* Modal for Creating Users */}
       <UserCreateModal 
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -207,7 +208,6 @@ const UserListPage: React.FC = () => {
         }}
       />
 
-      {/* Modal for Editing Users */}
       <UserEditModal 
         open={isEditModalOpen}
         user={selectedUser}

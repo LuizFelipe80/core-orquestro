@@ -1,33 +1,39 @@
 /**
- * Interface representing the detailed user information received from the backend.
- * Matches the UserResponseDTO Java record.
+ * Detailed information about a module-specific permission.
+ */
+export interface ModuleRoleResponseDTO {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
+/**
+ * High-level access profile that aggregates multiple module roles.
+ */
+export interface UserRoleResponseDTO {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  moduleRoles: {
+    id: string;
+    name: string;
+  }[];
+}
+
+/**
+ * Interface representing user data.
+ * Updated to support multiple roles inherited from the indirect RBAC model.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
-
-/**
- * Interface for users to update their own basic profile information.
- */
-export interface UserProfileUpdateDTO {
-  firstName: string;
-  lastName: string;
-  languageId: string;
-}
-
-/**
- * Interface for secure password change operations.
- */
-export interface PasswordChangeRequestDTO {
-  currentPassword?: string;
-  newPassword?: string;
-}
-
 export interface UserResponseDTO {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  globalRole: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_USER';
+  roles: string[];
   active: boolean;
   accountLocked: boolean;
   lastLoginAt: string | null;
@@ -40,7 +46,7 @@ export interface UserResponseDTO {
 }
 
 /**
- * Interface for the paginated response structure provided by Spring Data JPA.
+ * Generic interface for paginated data from Spring Data JPA.
  */
 export interface PaginatedResponse<T> {
   content: T[];
@@ -51,8 +57,7 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * Interface for updating an existing user.
- * Matches the UserUpdateDTO Java record.
+ * Payload for administrative user updates.
  */
 export interface UserUpdateDTO {
   firstName: string;
@@ -60,4 +65,21 @@ export interface UserUpdateDTO {
   email: string;
   globalRole: string;
   languageId: string;
+}
+
+/**
+ * Payload for self-service profile updates.
+ */
+export interface UserProfileUpdateDTO {
+  firstName: string;
+  lastName: string;
+  languageId: string;
+}
+
+/**
+ * Payload for secure password change.
+ */
+export interface PasswordChangeRequestDTO {
+  currentPassword?: string;
+  newPassword?: string;
 }

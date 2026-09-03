@@ -1,12 +1,11 @@
 package com.orquestro.data.domain;
 
-import com.orquestro.data.domain.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -21,12 +20,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serial;
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Represents a system user within the Orquestro platform.
- * Implements Spring Security's UserDetails for authentication integration.
- * Includes security fields for brute force protection and account locking.
+ * Implements UserDetails for seamless Spring Security integration.
+ * Supports multiple high-level roles and inherited granular permissions.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -54,9 +54,18 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "global_role", nullable = false)
-    private UserRole globalRole;
+    /**
+     * Collection of profiles assigned to the user.
+     * Uses EAGER fetch type to ensure availability during JWT generation and auth checks.
+     */
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_assigned_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_role_id")
+    )
+    @Builder.Default
+    private Set<UserRole> roles = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "language_id", nullable = false)
@@ -70,10 +79,6 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "account_locked", nullable = false)
     private boolean accountLocked = false;
 
-    /**
-     * Counter for consecutive failed login attempts.
-     * Part of the brute force protection mechanism.
-     */
     @Builder.Default
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts = 0;
@@ -82,26 +87,39 @@ public class User extends BaseEntity implements UserDetails {
     private LocalDateTime lastLoginAt;
 
     /**
-     * Increments the counter of failed login attempts.
+     * Brute force protection logic.
      */
     public void incrementFailedAttempts() {
         this.failedLoginAttempts++;
     }
 
     /**
-     * Resets the counter of failed login attempts to zero.
-     * Should be called after a successful login.
+     * Resets failed attempts after a successful login.
      */
     public void resetFailedAttempts() {
         this.failedLoginAttempts = 0;
     }
 
     /**
-     * Returns the authorities granted to the user based on their global role.
+     * Consolidates all authorities for the security context.
+     * It flattens the hierarchy by adding 'ROLE_' prefixed UserRoles
+     * and raw ModuleRole names as direct authorities.
+     * 
+     * @return a flattened collection of granted authorities.
      */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(globalRole.name()));
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+
+        for (UserRole role : roles) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+            
+            role.getModuleRoles().forEach(moduleRole -> 
+                authorities.add(new SimpleGrantedAuthority(moduleRole.getName()))
+            );
+        }
+
+        return authorities;
     }
 
     @Override
@@ -135,7 +153,7 @@ public class User extends BaseEntity implements UserDetails {
     }
 
     /**
-     * Helper method to get the user's full name.
+     * Helper to get full name.
      */
     public String getFullName() {
         return firstName + " " + lastName;

@@ -56,7 +56,7 @@ const AppRoutes: React.FC = () => {
           element={
             <div style={{ textAlign: 'center', paddingTop: '50px' }}>
               <h2>Welcome back, {user?.fullName}!</h2>
-              <p>You are logged in as a <strong>{user?.globalRole}</strong>.</p>
+              <p>You are logged in as a <strong>{user?.roles.join(', ')}</strong>.</p>
             </div>
           } 
         />

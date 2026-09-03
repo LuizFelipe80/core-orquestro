@@ -70,13 +70,13 @@ const MainLayout: React.FC = () => {
       key: '/users',
       icon: <UserOutlined />,
       label: t('menu.users'),
-      disabled: user?.globalRole === 'ROLE_USER',
+      disabled: !user?.roles.includes('ADMINISTRATOR') && !user?.roles.includes('MANAGER'),
     },
     {
       key: '/languages',
       icon: <GlobalOutlined />,
       label: t('menu.languages'),
-      disabled: user?.globalRole === 'ROLE_USER',
+      disabled: !user?.roles.includes('ADMINISTRATOR') && !user?.roles.includes('MANAGER'),
     },
   ];
 
@@ -133,7 +133,7 @@ const MainLayout: React.FC = () => {
                 {screens.md && (
                   <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
                     <div style={{ fontWeight: 600 }}>{user?.fullName}</div>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>{user?.globalRole}</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>{user?.roles.join(', ')}</Text>
                   </div>
                 )}
                 <Avatar style={{ backgroundColor: '#102a43' }} icon={<UserOutlined />} />

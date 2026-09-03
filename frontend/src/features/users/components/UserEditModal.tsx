@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, App as AntdApp } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { UserResponseDTO, UserUpdateDTO } from '../types/userTypes';
+import { UserResponseDTO, UserUpdateDTO, UserRoleResponseDTO } from '../types/userTypes';
 import userService from '../services/userService';
 import languageService, { LanguageResponseDTO } from '../../languages/services/languageService';
+import userRoleService from '../services/userRoleService';
 
 /**
  * Properties for the UserEditModal component.
@@ -17,7 +18,8 @@ interface UserEditModalProps {
 
 /**
  * Modal component for editing user information.
- * Manages its own internal state for languages and form submission logic.
+ * Dynamically fetches roles and languages to ensure data consistency 
+ * with the backend's entity-based RBAC model.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -27,21 +29,38 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
   const [form] = Form.useForm();
   
   const [languages, setLanguages] = useState<LanguageResponseDTO[]>([]);
+  const [roles, setRoles] = useState<UserRoleResponseDTO[]>([]);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   /**
-   * Loads the list of active languages to populate the selection field.
+   * Loads the necessary form options (languages and roles) when the modal opens.
    */
   useEffect(() => {
-    if (open) {
-      languageService.getActiveLanguages()
-        .then(setLanguages)
-        .catch(() => message.error(t('languages.load_error')));
-    }
+    const fetchOptions = async () => {
+      if (!open) return;
+      
+      setLoading(true);
+      try {
+        const [langData, roleData] = await Promise.all([
+          languageService.getActiveLanguages(),
+          userRoleService.getAllRoles()
+        ]);
+        setLanguages(langData);
+        setRoles(roleData);
+      } catch (error) {
+        message.error(t('users.load_options_error'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOptions();
   }, [open, t, message]);
 
   /**
-   * Resets and populates the form whenever the selected user changes.
+   * Syncs the form fields with the selected user's data.
+   * Note: It takes the first role from the array as the primary role for the selector.
    */
   useEffect(() => {
     if (user) {
@@ -49,7 +68,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        globalRole: user.globalRole,
+        globalRole: user.roles[0] || '',
         languageId: user.language.id,
       });
     } else {
@@ -58,9 +77,9 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
   }, [user, form]);
 
   /**
-   * Handles the form submission by calling the user service.
+   * Processes the update request.
    * 
-   * @param values The validated form data.
+   * @param values The form values to be sent to the server.
    */
   const handleFinish = async (values: any) => {
     if (!user) return;
@@ -91,14 +110,13 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
       onOk={() => form.submit()}
       confirmLoading={submitting}
       destroyOnClose
-      maskClosable={false}
       width={500}
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={handleFinish}
-        initialValues={{ globalRole: 'ROLE_USER' }}
+        disabled={loading}
       >
         <Form.Item
           name="firstName"
@@ -132,10 +150,12 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
           label={t('users.role')}
           rules={[{ required: true, message: t('users.role_required') }]}
         >
-          <Select>
-            <Select.Option value="ROLE_ADMIN">Administrator</Select.Option>
-            <Select.Option value="ROLE_MANAGER">Manager</Select.Option>
-            <Select.Option value="ROLE_USER">Standard User</Select.Option>
+          <Select loading={loading}>
+            {roles.map(role => (
+              <Select.Option key={role.id} value={role.name}>
+                {role.name}
+              </Select.Option>
+            ))}
           </Select>
         </Form.Item>
 
@@ -144,7 +164,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
           label={t('users.language')}
           rules={[{ required: true, message: t('users.language_required') }]}
         >
-          <Select loading={languages.length === 0}>
+          <Select loading={loading}>
             {languages.map(lang => (
               <Select.Option key={lang.id} value={lang.id}>
                 {lang.name} ({lang.code})

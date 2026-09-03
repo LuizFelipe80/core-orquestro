@@ -3,7 +3,12 @@ import { Modal, Form, Input, Select, App as AntdApp } from 'antd';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
 import languageService, { LanguageResponseDTO } from '../../languages/services/languageService';
+import userRoleService from '../services/userRoleService';
+import { UserRoleResponseDTO } from '../types/userTypes';
 
+/**
+ * Properties for the UserCreateModal component.
+ */
 interface UserCreateModalProps {
   open: boolean;
   onClose: () => void;
@@ -12,6 +17,7 @@ interface UserCreateModalProps {
 
 /**
  * Modal component for administrative user creation.
+ * Dynamically fetches languages and access roles from the backend to populate the form.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -21,26 +27,56 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onClose, onSucc
   const [form] = Form.useForm();
   
   const [languages, setLanguages] = useState<LanguageResponseDTO[]>([]);
+  const [roles, setRoles] = useState<UserRoleResponseDTO[]>([]);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  /**
+   * Fetches required data for the form when the modal opens.
+   */
   useEffect(() => {
+    const fetchInitialData = async () => {
+      if (!open) return;
+      
+      setLoading(true);
+      try {
+        const [languageData, roleData] = await Promise.all([
+          languageService.getActiveLanguages(),
+          userRoleService.getAllRoles()
+        ]);
+        
+        setLanguages(languageData);
+        setRoles(roleData);
+      } catch (error) {
+        message.error(t('users.load_options_error') || 'Failed to load form options.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (open) {
       form.resetFields();
-      languageService.getActiveLanguages()
-        .then(setLanguages)
-        .catch(() => message.error(t('languages.load_error')));
+      fetchInitialData();
     }
-  }, [open, t, message, form]);
+  }, [open, form, t, message]);
 
+  /**
+   * Handles the submission of the user creation form.
+   * 
+   * @param values The validated form data.
+   */
   const handleFinish = async (values: any) => {
     setSubmitting(true);
     try {
-      // Reuses the backend registration logic
-      await userService.createUser({
+      const selectedLanguage = languages.find(l => l.id === values.languageId);
+      
+      const payload = {
         ...values,
-        languageCode: languages.find(l => l.id === values.languageId)?.code
-      });
-      message.success(t('users.create_success') || 'User created successfully.');
+        languageCode: selectedLanguage?.code
+      };
+
+      await userService.createUser(payload);
+      message.success(t('users.create_success'));
       onSuccess();
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || t('users.create_error');
@@ -52,7 +88,7 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onClose, onSucc
 
   return (
     <Modal
-      title={t('users.create_user') || 'Create New User'}
+      title={t('users.create_user')}
       open={open}
       onCancel={onClose}
       onOk={() => form.submit()}
@@ -60,30 +96,74 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onClose, onSucc
       destroyOnClose
       width={500}
     >
-      <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ globalRole: 'ROLE_USER' }}>
-        <Form.Item name="firstName" label={t('users.first_name')} rules={[{ required: true }]}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
+        disabled={loading}
+      >
+        <Form.Item
+          name="firstName"
+          label={t('users.first_name')}
+          rules={[{ required: true, message: t('users.first_name_required') }]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item name="lastName" label={t('users.last_name')} rules={[{ required: true }]}>
+
+        <Form.Item
+          name="lastName"
+          label={t('users.last_name')}
+          rules={[{ required: true, message: t('users.last_name_required') }]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item name="email" label={t('users.email')} rules={[{ required: true, type: 'email' }]}>
+
+        <Form.Item
+          name="email"
+          label={t('users.email')}
+          rules={[
+            { required: true, message: t('users.email_required') },
+            { type: 'email', message: t('users.email_invalid') }
+          ]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item name="password" label={t('auth.password_label')} rules={[{ required: true, min: 8 }]}>
+
+        <Form.Item
+          name="password"
+          label={t('auth.password_label')}
+          rules={[
+            { required: true, message: t('auth.password_required') },
+            { min: 8, message: t('users.password_too_short') }
+          ]}
+        >
           <Input.Password />
         </Form.Item>
-        <Form.Item name="globalRole" label={t('users.role')} rules={[{ required: true }]}>
-          <Select>
-            <Select.Option value="ROLE_ADMIN">Administrator</Select.Option>
-            <Select.Option value="ROLE_MANAGER">Manager</Select.Option>
-            <Select.Option value="ROLE_USER">Standard User</Select.Option>
+
+        <Form.Item
+          name="globalRole"
+          label={t('users.role')}
+          rules={[{ required: true, message: t('users.role_required') }]}
+        >
+          <Select loading={loading}>
+            {roles.map(role => (
+              <Select.Option key={role.id} value={role.name}>
+                {role.name}
+              </Select.Option>
+            ))}
           </Select>
         </Form.Item>
-        <Form.Item name="languageId" label={t('users.language')} rules={[{ required: true }]}>
-          <Select>
+
+        <Form.Item
+          name="languageId"
+          label={t('users.language')}
+          rules={[{ required: true, message: t('users.language_required') }]}
+        >
+          <Select loading={loading}>
             {languages.map(lang => (
-              <Select.Option key={lang.id} value={lang.id}>{lang.name}</Select.Option>
+              <Select.Option key={lang.id} value={lang.id}>
+                {lang.name} ({lang.code})
+              </Select.Option>
             ))}
           </Select>
         </Form.Item>

@@ -2,10 +2,11 @@ package com.orquestro.management.service;
 
 import com.orquestro.data.domain.Language;
 import com.orquestro.data.domain.User;
+import com.orquestro.data.domain.UserRole;
 import com.orquestro.data.domain.UserSession;
-import com.orquestro.data.domain.enums.UserRole;
 import com.orquestro.data.repository.LanguageRepository;
 import com.orquestro.data.repository.UserRepository;
+import com.orquestro.data.repository.UserRoleRepository;
 import com.orquestro.data.repository.UserSessionRepository;
 import com.orquestro.management.dto.request.AuthenticationRequestDTO;
 import com.orquestro.management.dto.request.RegisterRequestDTO;
@@ -28,12 +29,13 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
- * Service responsible for user authentication, registration, and session management.
- * Implements advanced security features including brute force protection, 
- * account locking, and secure token rotation.
+ * Service responsible for user authentication and authorization workflows.
+ * Orchestrates login, registration, and session management using an indirect RBAC model.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -42,8 +44,10 @@ import java.util.UUID;
 public class AuthService {
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final String DEFAULT_REGISTRATION_ROLE = "USER";
 
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final LanguageRepository languageRepository;
     private final UserSessionRepository userSessionRepository;
     private final PasswordEncoder passwordEncoder;
@@ -54,11 +58,10 @@ public class AuthService {
     private long refreshExpiration;
 
     /**
-     * Main authentication entry point. 
-     * Coordinates the login process and handles security exceptions.
+     * Authenticates a user and manages the security context.
      * 
      * @param request the login credentials.
-     * @return the authentication response with tokens.
+     * @return the authentication details and security tokens.
      */
     public AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request) {
         try {
@@ -66,11 +69,9 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(request.email(), request.password())
             );
 
-            /* On successful authentication, reset security counters and issue tokens */
             return processSuccessfulLogin(request.email());
 
         } catch (BadCredentialsException e) {
-            /* On failed authentication, increment counter in a separate transaction */
             updateFailedAttempts(request.email());
             throw new BusinessException("Invalid email or password", HttpStatus.UNAUTHORIZED);
         } catch (LockedException e) {
@@ -81,11 +82,7 @@ public class AuthService {
     }
 
     /**
-     * Increments the failed login attempt counter.
-     * Uses Propagation.REQUIRES_NEW to ensure the update is committed 
-     * even if the main authentication transaction rolls back.
-     * 
-     * @param email the user's email.
+     * Updates the counter of failed attempts in a dedicated transaction.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateFailedAttempts(String email) {
@@ -101,10 +98,7 @@ public class AuthService {
     }
 
     /**
-     * Resets failed attempts and updates login metadata after a successful login.
-     * 
-     * @param email the user's email.
-     * @return the complete authentication response.
+     * Finalizes the login process upon success.
      */
     @Transactional
     public AuthenticationResponseDTO processSuccessfulLogin(String email) {
@@ -119,7 +113,10 @@ public class AuthService {
     }
 
     /**
-     * Registers a new user with standard initial security state.
+     * Registers a new user and assigns a default access profile.
+     * 
+     * @param request the registration details.
+     * @return the authentication details for the new user.
      */
     @Transactional
     public AuthenticationResponseDTO register(RegisterRequestDTO request) {
@@ -131,16 +128,18 @@ public class AuthService {
                 .orElseGet(() -> languageRepository.findByIsDefaultTrue()
                         .orElseThrow(() -> new BusinessException("Default language not found.", HttpStatus.INTERNAL_SERVER_ERROR)));
 
+        UserRole defaultRole = userRoleRepository.findByName(DEFAULT_REGISTRATION_ROLE)
+                .orElseThrow(() -> new BusinessException("Default user role configuration not found.", HttpStatus.INTERNAL_SERVER_ERROR));
+
         User user = User.builder()
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .globalRole(UserRole.ROLE_USER)
                 .language(language)
                 .active(true)
                 .accountLocked(false)
-                .failedLoginAttempts(0)
+                .roles(Set.of(defaultRole))
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -148,8 +147,7 @@ public class AuthService {
     }
 
     /**
-     * Performs secure Refresh Token Rotation.
-     * Revokes the old token and issues a new pair of access/refresh tokens.
+     * Issues new tokens using a valid refresh token.
      */
     @Transactional
     public TokenRefreshResponseDTO refreshToken(TokenRefreshRequestDTO request) {
@@ -178,7 +176,7 @@ public class AuthService {
     }
 
     /**
-     * Voluntarily terminates a user session.
+     * Revokes the user session.
      */
     @Transactional
     public void logout(String refreshToken) {
@@ -190,7 +188,7 @@ public class AuthService {
     }
 
     /**
-     * Internal helper to orchestrate token generation and session persistence.
+     * Internal helper to create session records and build the response DTO.
      */
     private AuthenticationResponseDTO createSessionAndBuildResponse(User user) {
         String accessToken = jwtService.generateToken(user);
@@ -198,18 +196,22 @@ public class AuthService {
 
         saveUserSession(user, refreshToken);
 
+        Set<String> roleNames = user.getRoles().stream()
+                .map(UserRole::getName)
+                .collect(Collectors.toSet());
+
         return AuthenticationResponseDTO.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
-                .globalRole(user.getGlobalRole().name())
+                .roles(roleNames)
                 .build();
     }
 
     /**
-     * Saves a new session record in the database for auditing and rotation.
+     * Persists a new session in the database.
      */
     private void saveUserSession(User user, String refreshToken) {
         UserSession session = UserSession.builder()

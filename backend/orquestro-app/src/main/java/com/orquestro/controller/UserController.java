@@ -30,7 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+@PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
 public class UserController {
 
     private final UserService userService;

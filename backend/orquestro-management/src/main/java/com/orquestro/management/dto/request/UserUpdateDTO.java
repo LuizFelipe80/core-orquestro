@@ -1,6 +1,5 @@
 package com.orquestro.management.dto.request;
 
-import com.orquestro.data.domain.enums.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,12 +8,13 @@ import java.util.UUID;
 
 /**
  * Data Transfer Object representing a user update request.
- * Used to modify existing user information such as name, email, role, and preferences.
+ * Updated to use a String for the role name, supporting the dynamic 
+ * Entity-based RBAC model.
  * 
  * @param firstName The user's updated first name.
  * @param lastName The user's updated last name.
  * @param email The user's updated email address.
- * @param globalRole The administrative role to be assigned.
+ * @param globalRole The name of the role to be assigned (e.g., "ADMINISTRATOR").
  * @param languageId The unique identifier of the user's preferred language.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
@@ -34,8 +34,8 @@ public record UserUpdateDTO(
     @Size(max = 180, message = "Email must not exceed 180 characters")
     String email,
 
-    @NotNull(message = "Global role is required")
-    UserRole globalRole,
+    @NotBlank(message = "Global role name is required")
+    String globalRole,
 
     @NotNull(message = "Language ID is required")
     UUID languageId

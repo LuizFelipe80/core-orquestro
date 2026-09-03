@@ -40,7 +40,7 @@ public class LanguageController {
      * @return a list of all languages.
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
     public ResponseEntity<List<LanguageResponseDTO>> getAllLanguages() {
         return ResponseEntity.ok(languageService.findAll());
     }
@@ -64,7 +64,7 @@ public class LanguageController {
      * @return the language details.
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'MANAGER')")
     public ResponseEntity<LanguageResponseDTO> getLanguageById(@PathVariable UUID id) {
         return ResponseEntity.ok(languageService.findById(id));
     }
@@ -77,7 +77,7 @@ public class LanguageController {
      * @return the created language with 201 Created status.
      */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<LanguageResponseDTO> createLanguage(
             @Valid @RequestBody LanguageRequestDTO request
     ) {
@@ -93,7 +93,7 @@ public class LanguageController {
      * @return the updated language details.
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<LanguageResponseDTO> updateLanguage(
             @PathVariable UUID id,
             @Valid @RequestBody LanguageRequestDTO request
@@ -109,7 +109,7 @@ public class LanguageController {
      * @return a 204 No Content response.
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Void> deleteLanguage(@PathVariable UUID id) {
         languageService.delete(id);
         return ResponseEntity.noContent().build();
