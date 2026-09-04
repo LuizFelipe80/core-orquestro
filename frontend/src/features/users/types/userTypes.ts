@@ -24,7 +24,7 @@ export interface UserRoleResponseDTO {
 
 /**
  * Interface representing user data.
- * Updated to support multiple roles inherited from the indirect RBAC model.
+ * Supports multiple roles inherited from the indirect RBAC model.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -58,12 +58,13 @@ export interface PaginatedResponse<T> {
 
 /**
  * Payload for administrative user updates.
+ * Updated to support multiple roles assignment.
  */
 export interface UserUpdateDTO {
   firstName: string;
   lastName: string;
   email: string;
-  globalRole: string;
+  roles: string[]; 
   languageId: string;
 }
 

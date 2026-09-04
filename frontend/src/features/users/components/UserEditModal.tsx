@@ -18,8 +18,7 @@ interface UserEditModalProps {
 
 /**
  * Modal component for editing user information.
- * Dynamically fetches roles and languages to ensure data consistency 
- * with the backend's entity-based RBAC model.
+ * Updated to support multiple role selection (Indirect RBAC model).
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -34,7 +33,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
   const [submitting, setSubmitting] = useState(false);
 
   /**
-   * Loads the necessary form options (languages and roles) when the modal opens.
+   * Fetches the necessary options for the form when opened.
    */
   useEffect(() => {
     const fetchOptions = async () => {
@@ -59,8 +58,8 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
   }, [open, t, message]);
 
   /**
-   * Syncs the form fields with the selected user's data.
-   * Note: It takes the first role from the array as the primary role for the selector.
+   * Populates the form with the selected user's data.
+   * Matches the array of roles directly with the multi-select component.
    */
   useEffect(() => {
     if (user) {
@@ -68,7 +67,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        globalRole: user.roles[0] || '',
+        roles: user.roles, 
         languageId: user.language.id,
       });
     } else {
@@ -77,15 +76,14 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
   }, [user, form]);
 
   /**
-   * Processes the update request.
-   * 
-   * @param values The form values to be sent to the server.
+   * Processes the form submission.
    */
   const handleFinish = async (values: any) => {
     if (!user) return;
 
     setSubmitting(true);
     try {
+      /* values.roles is already an array of strings due to mode="multiple" */
       const updateData: UserUpdateDTO = {
         ...values,
         languageId: values.languageId,
@@ -146,11 +144,16 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
         </Form.Item>
 
         <Form.Item
-          name="globalRole"
+          name="roles"
           label={t('users.role')}
           rules={[{ required: true, message: t('users.role_required') }]}
         >
-          <Select loading={loading}>
+          <Select 
+            mode="multiple" 
+            placeholder={t('users.select_roles')}
+            loading={loading}
+            allowClear
+          >
             {roles.map(role => (
               <Select.Option key={role.id} value={role.name}>
                 {role.name}

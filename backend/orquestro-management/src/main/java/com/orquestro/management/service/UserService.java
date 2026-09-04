@@ -27,7 +27,8 @@ import java.util.stream.Collectors;
 
 /**
  * Service responsible for managing administrative and self-service user operations.
- * Updated to handle the indirect RBAC model where users possess multiple UserRoles.
+ * Implements a flexible RBAC model that allows users to hold multiple access profiles
+ * simultaneously, enabling permission aggregation across different modules.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -42,9 +43,6 @@ public class UserService {
 
     /**
      * Retrieves a paginated list of all users.
-     * 
-     * @param pageable pagination details.
-     * @return a page of UserResponseDTOs.
      */
     @Transactional(readOnly = true)
     public Page<UserResponseDTO> findAll(Pageable pageable) {
@@ -54,9 +52,6 @@ public class UserService {
 
     /**
      * Finds a specific user by its unique identifier.
-     * 
-     * @param id the UUID of the user.
-     * @return the user details as a DTO.
      */
     @Transactional(readOnly = true)
     public UserResponseDTO findById(UUID id) {
@@ -66,10 +61,11 @@ public class UserService {
     }
 
     /**
-     * Updates an existing user's administrative information.
+     * Updates an existing user's information and access roles.
+     * Implements role synchronization to support multiple UserRoles.
      * 
      * @param id the user UUID.
-     * @param request the update data.
+     * @param request the update data containing a set of role names.
      * @return the updated user details.
      */
     @Transactional
@@ -84,15 +80,18 @@ public class UserService {
         Language language = languageRepository.findById(request.languageId())
                 .orElseThrow(() -> new BusinessException("The selected language was not found.", HttpStatus.BAD_REQUEST));
 
-        /* Logic to update roles: for now, we assume the DTO sends the primary role name */
-        UserRole targetRole = userRoleRepository.findByName(request.globalRole())
-                .orElseThrow(() -> new BusinessException("The specified role does not exist.", HttpStatus.BAD_REQUEST));
+        /* Resolves the set of UserRole entities based on the names provided in the DTO */
+        Set<UserRole> targetRoles = request.roles().stream()
+                .map(roleName -> userRoleRepository.findByName(roleName)
+                        .orElseThrow(() -> new BusinessException("Role not found: " + roleName, HttpStatus.BAD_REQUEST)))
+                .collect(Collectors.toSet());
 
         user.setFirstName(request.firstName());
         user.setLastName(request.lastName());
         user.setEmail(request.email());
         user.setLanguage(language);
-        user.setRoles(Set.of(targetRole));
+        user.getRoles().clear();
+        user.getRoles().addAll(targetRoles);
 
         return mapToResponse(userRepository.save(user));
     }
@@ -168,7 +167,7 @@ public class UserService {
     }
 
     /**
-     * Maps a User entity to a UserResponseDTO, extracting role names from the collection.
+     * Internal helper to map User entity to UserResponseDTO.
      */
     private UserResponseDTO mapToResponse(User user) {
         Set<String> roleNames = user.getRoles().stream()
