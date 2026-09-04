@@ -9,6 +9,7 @@ import LanguageListPage from '../features/languages/pages/LanguageListPage';
 import ModuleRoleCatalogPage from '../features/access-control/pages/ModuleRoleCatalogPage';
 import UserRoleManagementPage from '../features/access-control/pages/UserRoleManagementPage';
 import { useAuth } from '../context/AuthContext';
+import { Color } from 'antd/es/color-picker';
 
 /**
  * Main Application Routes component.
@@ -46,7 +47,7 @@ const AppRoutes: React.FC = () => {
           path="/" 
           element={
             <div style={{ textAlign: 'center', paddingTop: '50px' }}>
-              <h2>Welcome back, {user?.fullName}!</h2>
+              <h2 style={{fontWeight: '400', color: '#333' }}>Welcome back, <strong> {user?.fullName}! </strong> </h2>
               <p>You are logged in as: <strong>{user?.roles.join(', ')}</strong>.</p>
             </div>
           } 
