@@ -7,7 +7,10 @@ import {
   UserOutlined,
   GlobalOutlined,
   LogoutOutlined,
-  TranslationOutlined
+  TranslationOutlined,
+  SafetyCertificateOutlined,
+  ControlOutlined,
+  SettingOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -19,8 +22,9 @@ const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
 /**
- * Main Layout with Dynamic Language Selection.
- * Syncs the header language dropdown with the active languages in the database.
+ * Main Layout component for the Orquestro platform.
+ * Provides a responsive shell with sidebar navigation, user profile management,
+ * and dynamic language switching.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -38,15 +42,12 @@ const MainLayout: React.FC = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  /**
-   * Fetches the list of active languages from the backend to populate the dropdown.
-   */
   const fetchActiveLanguages = useCallback(async () => {
     try {
       const data = await languageService.getActiveLanguages();
       setActiveLanguages(data);
     } catch (error) {
-      console.error('Failed to load active languages for the header selector.');
+      console.error('Failed to load languages.');
     }
   }, []);
 
@@ -54,9 +55,6 @@ const MainLayout: React.FC = () => {
     fetchActiveLanguages();
   }, [fetchActiveLanguages]);
 
-  /**
-   * Maps active languages to Ant Design Menu items.
-   */
   const languageMenuItems = activeLanguages.map(lang => ({
     key: lang.code,
     label: lang.name,
@@ -64,8 +62,16 @@ const MainLayout: React.FC = () => {
     disabled: i18n.language === lang.code,
   }));
 
+  /**
+   * Defines the sidebar menu structure.
+   * Includes nested items for Access Control management.
+   */
   const menuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: t('menu.dashboard') },
+    { 
+      key: '/', 
+      icon: <DashboardOutlined />, 
+      label: t('menu.dashboard') 
+    },
     {
       key: '/users',
       icon: <UserOutlined />,
@@ -76,16 +82,34 @@ const MainLayout: React.FC = () => {
       key: '/languages',
       icon: <GlobalOutlined />,
       label: t('menu.languages'),
-      disabled: !user?.roles.includes('ADMINISTRATOR') && !user?.roles.includes('MANAGER'),
+      disabled: !user?.roles.includes('ADMINISTRATOR'),
     },
+    {
+      key: 'access-control',
+      icon: <SafetyCertificateOutlined />,
+      label: t('menu.access_control'),
+      disabled: !user?.roles.includes('ADMINISTRATOR'),
+      children: [
+        {
+          key: '/user-roles',
+          icon: <ControlOutlined />,
+          label: t('menu.user_roles'),
+        },
+        {
+          key: '/module-roles',
+          icon: <SettingOutlined />,
+          label: t('menu.module_roles'),
+        },
+      ]
+    }
   ];
 
   const userMenuItems = [
     { 
       key: 'profile', 
       label: t('menu.profile'), 
-      icon: <UserOutlined />, 
-      onClick: () => navigate('/profile') 
+      icon: <UserOutlined />,
+      onClick: () => navigate('/profile')
     },
     { type: 'divider' as const },
     {
@@ -99,21 +123,47 @@ const MainLayout: React.FC = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed} breakpoint="lg" onBreakpoint={(broken) => setCollapsed(broken)}>
-        <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>
+      <Sider 
+        trigger={null} 
+        collapsible 
+        collapsed={collapsed} 
+        breakpoint="lg" 
+        onBreakpoint={(broken) => setCollapsed(broken)}
+        style={{ boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)' }}
+      >
+        <div style={{ 
+          height: 32, 
+          margin: 16, 
+          background: 'rgba(255, 255, 255, 0.2)', 
+          borderRadius: 6, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          color: '#fff', 
+          fontWeight: 'bold' 
+        }}>
           {collapsed ? 'O' : 'ORQUESTRO'}
         </div>
         <Menu
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
+          defaultOpenKeys={['access-control']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
         />
       </Sider>
       
       <Layout>
-        <Header style={{ padding: '0 16px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,21,41,.08)', zIndex: 1 }}>
+        <Header style={{ 
+          padding: '0 16px', 
+          background: colorBgContainer, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          boxShadow: '0 1px 4px rgba(0,21,41,.08)', 
+          zIndex: 1 
+        }}>
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -133,7 +183,9 @@ const MainLayout: React.FC = () => {
                 {screens.md && (
                   <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
                     <div style={{ fontWeight: 600 }}>{user?.fullName}</div>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>{user?.roles.join(', ')}</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {user?.roles.join(', ')}
+                    </Text>
                   </div>
                 )}
                 <Avatar style={{ backgroundColor: '#102a43' }} icon={<UserOutlined />} />
@@ -142,7 +194,13 @@ const MainLayout: React.FC = () => {
           </Space>
         </Header>
 
-        <Content style={{ margin: '24px 16px', padding: 24, minHeight: 280, background: colorBgContainer, borderRadius: borderRadiusLG }}>
+        <Content style={{ 
+          margin: '24px 16px', 
+          padding: 24, 
+          minHeight: 280, 
+          background: colorBgContainer, 
+          borderRadius: borderRadiusLG 
+        }}>
           <Outlet />
         </Content>
       </Layout>

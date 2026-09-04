@@ -10,7 +10,9 @@
     "edit": "Editar",
     "yes": "Sim",
     "no": "Não",
-    "delete": "Excluir"
+    "delete": "Excluir",
+    "active": "Ativo",
+    "inactive": "Inativo"
   },
   "auth": {
     "login_title": "Orquestro",
@@ -29,7 +31,10 @@
     "users": "Gestão de Usuários",
     "languages": "Idiomas",
     "profile": "Meu Perfil",
-    "sign_out": "Sair"
+    "sign_out": "Sair",
+    "access_control": "Controle de Acesso",
+    "user_roles": "Perfis e Mapeamento",
+    "module_roles": "Catálogo de Permissões"
   },
   "users": {
     "full_name": "Nome Completo",
@@ -40,14 +45,16 @@
     "email": "E-mail",
     "email_required": "E-mail é obrigatório",
     "email_invalid": "Formato de e-mail inválido",
-    "role": "Perfil Global",
-    "role_required": "O perfil é obrigatório",
+    "role": "Perfis Atribuídos",
+    "role_required": "Pelo menos um perfil é obrigatório",
+    "select_roles": "Selecione os perfis de acesso",
     "language": "Idioma Preferido",
     "language_required": "O idioma é obrigatório",
     "status": "Ativo",
     "status_updated": "Status do usuário atualizado.",
     "status_error": "Falha ao atualizar status.",
     "load_error": "Falha ao carregar usuários.",
+    "load_options_error": "Falha ao carregar opções do formulário.",
     "new_user": "Novo Usuário",
     "create_user": "Criar Novo Usuário",
     "create_success": "Usuário criado com sucesso.",
@@ -87,5 +94,33 @@
     "load_error": "Falha ao carregar configurações de idioma.",
     "update_success": "Configurações de idioma atualizadas.",
     "update_error": "Falha ao atualizar idioma."
+  },
+  "access": {
+    "catalog_title": "Catálogo de Permissões",
+    "catalog_subtitle": "Papéis técnicos de negócio definidos pelos desenvolvedores. Estes papéis são usados para compor perfis de usuário.",
+    "catalog_load_error": "Falha ao carregar o catálogo de permissões.",
+    "no_roles_found": "Nenhuma permissão encontrada no catálogo.",
+    "role_name": "Nome da Permissão",
+    "role_description": "Descrição",
+    "status": "Status",
+    "management_title": "Perfis de Acesso",
+    "management_subtitle": "Defina perfis de alto nível agregando permissões técnicas do catálogo.",
+    "profiles_load_error": "Falha ao carregar perfis de acesso.",
+    "new_profile": "Novo Perfil",
+    "edit_profile": "Editar Perfil",
+    "create_profile": "Criar Perfil",
+    "profile_name": "Nome do Perfil",
+    "name_required": "O nome do perfil é obrigatório",
+    "profile_description": "Descrição",
+    "mapped_permissions": "Permissões Mapeadas",
+    "no_permissions_mapped": "Nenhuma permissão atribuída a este perfil",
+    "map_permissions": "Atribuir Permissões",
+    "map_hint": "Selecione quais papéis técnicos este perfil herda.",
+    "select_permissions": "Selecione do catálogo...",
+    "status_updated": "Status do perfil atualizado.",
+    "status_error": "Falha ao atualizar status do perfil.",
+    "profile_update_success": "Perfil atualizado com sucesso.",
+    "profile_create_success": "Perfil criado com sucesso.",
+    "save_error": "Falha ao salvar alterações do perfil."
   }
 }

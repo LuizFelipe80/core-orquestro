@@ -4,16 +4,17 @@ import { ProtectedRoute, PublicRoute } from './RouteGuards';
 import MainLayout from '../layout/MainLayout';
 import LoginPage from '../features/auth/pages/LoginPage';
 import UserListPage from '../features/users/pages/UserListPage';
-import { useAuth } from '../context/AuthContext';
-import LanguageListPage from '../features/languages/pages/LanguageListPage';
 import ProfilePage from '../features/users/pages/ProfilePage';
+import LanguageListPage from '../features/languages/pages/LanguageListPage';
+import ModuleRoleCatalogPage from '../features/access-control/pages/ModuleRoleCatalogPage';
+import UserRoleManagementPage from '../features/access-control/pages/UserRoleManagementPage';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Main Application Routes component.
  * 
- * Defines the navigation tree of the Orquestro platform.
- * It manages the transition between the public authentication area and the 
- * protected administrative area, applying the appropriate route guards.
+ * Orchestrates the navigation tree, merging core identity features with 
+ * the new indirect RBAC governance modules.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
@@ -22,12 +23,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* 
-          1. Public Routes Area 
-          Routes accessible only to users who are NOT authenticated.
-          If an authenticated user tries to access /login, the PublicRoute 
-          guard will redirect them to the home page.
-      */}
+      {/* 1. Public Routes Area */}
       <Route 
         path="/login" 
         element={
@@ -37,12 +33,7 @@ const AppRoutes: React.FC = () => {
         } 
       />
 
-      {/* 
-          2. Protected Application Shell 
-          The MainLayout acts as a master wrapper for all internal pages.
-          The ProtectedRoute guard ensures the entire tree is inaccessible 
-          without a valid session.
-      */}
+      {/* 2. Protected Application Shell */}
       <Route 
         element={
           <ProtectedRoute>
@@ -50,42 +41,31 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       >
-        {/* Dashboard / Home View */}
+        {/* Dashboard / Home View - Preserving your original implementation */}
         <Route 
           path="/" 
           element={
             <div style={{ textAlign: 'center', paddingTop: '50px' }}>
               <h2>Welcome back, {user?.fullName}!</h2>
-              <p>You are logged in as a <strong>{user?.roles.join(', ')}</strong>.</p>
+              <p>You are logged in as: <strong>{user?.roles.join(', ')}</strong>.</p>
             </div>
           } 
         />
 
-        {/* User Management Module */}
-        <Route 
-          path="/users" 
-          element={<UserListPage />} 
-        />
+        {/* Identity & Localization */}
+        <Route path="/users" element={<UserListPage />} />
+        <Route path="/languages" element={<LanguageListPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
 
-        {/* Languages Settings Placeholder 
-            Note: This will be replaced by the LanguageListPage in the next steps.
+        {/* 
+            Access Control & Governance (New Features)
+            Routes for managing the Indirect RBAC model.
         */}
-        <Route 
-          path="/languages" 
-          element={<LanguageListPage />}
-        />
-        
-        <Route 
-          path="/profile" 
-          element={<ProfilePage />} 
-        />
+        <Route path="/user-roles" element={<UserRoleManagementPage />} />
+        <Route path="/module-roles" element={<ModuleRoleCatalogPage />} />
       </Route>
 
-      {/* 
-          3. Global Fallback 
-          Captures any undefined URLs and redirects the user to the home page,
-          maintaining application consistency.
-      */}
+      {/* 3. Global Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

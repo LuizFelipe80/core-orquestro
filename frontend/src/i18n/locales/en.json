@@ -10,7 +10,9 @@
     "edit": "Edit",
     "yes": "Yes",
     "no": "No",
-    "delete": "Delete"
+    "delete": "Delete",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "auth": {
     "login_title": "Orquestro",
@@ -29,7 +31,10 @@
     "users": "Users Management",
     "languages": "Languages",
     "profile": "My Profile",
-    "sign_out": "Sign Out"
+    "sign_out": "Sign Out",
+    "access_control": "Access Control",
+    "user_roles": "Profiles & Mapping",
+    "module_roles": "Permissions Catalog"
   },
   "users": {
     "full_name": "Full Name",
@@ -40,14 +45,16 @@
     "email": "Email",
     "email_required": "Email is required",
     "email_invalid": "Invalid email format",
-    "role": "Global Role",
-    "role_required": "Role is required",
+    "role": "Assigned Profiles",
+    "role_required": "At least one profile is required",
+    "select_roles": "Select access profiles",
     "language": "Preferred Language",
     "language_required": "Language is required",
     "status": "Active",
     "status_updated": "User status updated successfully.",
     "status_error": "Failed to update user status.",
     "load_error": "Failed to load users.",
+    "load_options_error": "Failed to load form options.",
     "new_user": "New User",
     "create_user": "Create New User",
     "create_success": "User created successfully.",
@@ -87,5 +94,33 @@
     "load_error": "Failed to load language settings.",
     "update_success": "Language settings updated.",
     "update_error": "Failed to update language."
+  },
+  "access": {
+    "catalog_title": "Permissions Catalog",
+    "catalog_subtitle": "Technical business roles defined by system developers. These roles are used to compose user profiles.",
+    "catalog_load_error": "Failed to load the permissions catalog.",
+    "no_roles_found": "No permissions found in the catalog.",
+    "role_name": "Permission Name",
+    "role_description": "Description",
+    "status": "Status",
+    "management_title": "Access Profiles",
+    "management_subtitle": "Define high-level profiles by aggregating permissions from the catalog.",
+    "profiles_load_error": "Failed to load access profiles.",
+    "new_profile": "New Profile",
+    "edit_profile": "Edit Profile",
+    "create_profile": "Create Profile",
+    "profile_name": "Profile Name",
+    "name_required": "Profile name is required",
+    "profile_description": "Description",
+    "mapped_permissions": "Mapped Permissions",
+    "no_permissions_mapped": "No permissions assigned to this profile",
+    "map_permissions": "Assign Permissions",
+    "map_hint": "Select which technical roles this profile inherits.",
+    "select_permissions": "Select from catalog...",
+    "status_updated": "Profile status updated.",
+    "status_error": "Failed to update profile status.",
+    "profile_update_success": "Profile updated successfully.",
+    "profile_create_success": "Profile created successfully.",
+    "save_error": "Failed to save profile changes."
   }
 }
