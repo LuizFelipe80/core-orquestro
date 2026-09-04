@@ -2,6 +2,7 @@ package com.orquestro.management.service;
 
 import com.orquestro.data.domain.Language;
 import com.orquestro.data.repository.LanguageRepository;
+import com.orquestro.data.repository.UserRepository;
 import com.orquestro.management.dto.request.LanguageRequestDTO;
 import com.orquestro.management.dto.response.LanguageResponseDTO;
 import com.orquestro.management.exception.BusinessException;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class LanguageService {
 
     private final LanguageRepository languageRepository;
+    private final UserRepository userRepository;
 
     /**
      * Retrieves all languages registered in the system, regardless of status.
@@ -121,7 +123,7 @@ public class LanguageService {
 
     /**
      * Deletes a language from the system.
-     * Prevents deletion of the default system language.
+     * Prevents deletion of default or in-use languages.
      * 
      * @param id The ID of the language to delete.
      */
@@ -132,6 +134,10 @@ public class LanguageService {
 
         if (Boolean.TRUE.equals(language.getIsDefault())) {
             throw new BusinessException("The default system language cannot be deleted.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (userRepository.existsByLanguageId(id)) {
+            throw new BusinessException("Cannot delete language because it is currently assigned to existing users.", HttpStatus.CONFLICT);
         }
 
         languageRepository.delete(language);
@@ -150,19 +156,22 @@ public class LanguageService {
     }
 
     /**
-     * Validates that the name and code are not already used by another language.
+     * Validates that the name and code are not already used by another language using direct DB queries.
      */
     private void validateUniqueness(UUID id, String name, String code) {
-        languageRepository.findAll().stream()
-                .filter(l -> !l.getId().equals(id))
-                .forEach(l -> {
-                    if (l.getName().equalsIgnoreCase(name)) {
-                        throw new BusinessException("A language with this name already exists.", HttpStatus.CONFLICT);
-                    }
-                    if (l.getCode().equalsIgnoreCase(code)) {
-                        throw new BusinessException("A language with this code already exists.", HttpStatus.CONFLICT);
-                    }
-                });
+        boolean nameExists = (id == null)
+                ? languageRepository.existsByNameIgnoreCase(name)
+                : languageRepository.existsByNameIgnoreCaseAndIdNot(name, id);
+        if (nameExists) {
+            throw new BusinessException("A language with this name already exists.", HttpStatus.CONFLICT);
+        }
+
+        boolean codeExists = (id == null)
+                ? languageRepository.existsByCodeIgnoreCase(code)
+                : languageRepository.existsByCodeIgnoreCaseAndIdNot(code, id);
+        if (codeExists) {
+            throw new BusinessException("A language with this code already exists.", HttpStatus.CONFLICT);
+        }
     }
 
     /**

@@ -40,4 +40,24 @@ public interface LanguageRepository extends JpaRepository<Language, UUID> {
      * @return a list of active languages.
      */
     List<Language> findAllByActiveTrue();
+
+    /**
+     * Checks if another language with the given name exists (case-insensitive), excluding a specific ID.
+     */
+    boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
+
+    /**
+     * Checks if another language with the given code exists (case-insensitive), excluding a specific ID.
+     */
+    boolean existsByCodeIgnoreCaseAndIdNot(String code, UUID id);
+
+    /**
+     * Checks if a language with the given name exists (case-insensitive).
+     */
+    boolean existsByNameIgnoreCase(String name);
+
+    /**
+     * Checks if a language with the given code exists (case-insensitive).
+     */
+    boolean existsByCodeIgnoreCase(String code);
 }

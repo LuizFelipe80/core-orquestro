@@ -2,25 +2,26 @@ package com.orquestro.management.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.Set;
+import java.util.UUID;
 
 /**
- * Data Transfer Object representing a user registration request.
- * Contains necessary fields and validation constraints to create a new user 
- * in the Orquestro platform.
+ * Data Transfer Object representing an administrative user creation request.
+ * Allows administrators/managers to create users with explicit language and roles assignment.
  * 
  * @param firstName The user's first name.
  * @param lastName The user's last name.
- * @param email The user's unique email address, used for login.
- * @param password The user's plain text password (will be encoded before storage).
- * @param languageCode The ISO code of the user's preferred language (e.g., 'en', 'pt-BR').
- * @param roles Optional set of role names to assign upon registration.
+ * @param email The user's unique email address.
+ * @param password The user's plain text initial password.
+ * @param languageId The UUID of the user's preferred language.
+ * @param roles The set of role profile names to assign (e.g., ['USER', 'MANAGER']).
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
-public record RegisterRequestDTO(
+public record UserCreateRequestDTO(
     
     @NotBlank(message = "First name is required")
     @Size(max = 100, message = "First name must not exceed 100 characters")
@@ -39,9 +40,8 @@ public record RegisterRequestDTO(
     @Size(min = 8, message = "Password must be at least 8 characters long")
     String password,
 
-    @NotBlank(message = "Language code is required")
-    @Size(min = 2, max = 10, message = "Invalid language code format")
-    String languageCode,
+    @NotNull(message = "Language ID is required")
+    UUID languageId,
 
     Set<String> roles
 ) {

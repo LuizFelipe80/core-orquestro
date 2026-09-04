@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, App as AntdApp } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../../context/AuthContext';
 import userService from '../services/userService';
 import languageService, { LanguageResponseDTO } from '../../languages/services/languageService';
 import userRoleService from '../services/userRoleService';
-import { UserRoleResponseDTO } from '../types/userTypes';
+import { UserCreateDTO, UserRoleResponseDTO } from '../types/userTypes';
 
 /**
  * Properties for the UserCreateModal component.
@@ -18,18 +19,22 @@ interface UserCreateModalProps {
 /**
  * Modal component for administrative user creation.
  * Dynamically fetches languages and access roles from the backend to populate the form.
+ * Enforces privilege escalation prevention (only ADMINISTRATOR can grant ADMINISTRATOR).
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onClose, onSuccess }) => {
   const { t } = useTranslation();
   const { message } = AntdApp.useApp();
+  const { hasRole } = useAuth();
   const [form] = Form.useForm();
   
   const [languages, setLanguages] = useState<LanguageResponseDTO[]>([]);
   const [roles, setRoles] = useState<UserRoleResponseDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const isCurrentUserAdmin = hasRole('ADMINISTRATOR');
 
   /**
    * Fetches required data for the form when the modal opens.
@@ -68,11 +73,13 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onClose, onSucc
   const handleFinish = async (values: any) => {
     setSubmitting(true);
     try {
-      const selectedLanguage = languages.find(l => l.id === values.languageId);
-      
-      const payload = {
-        ...values,
-        languageCode: selectedLanguage?.code
+      const payload: UserCreateDTO = {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        password: values.password,
+        languageId: values.languageId,
+        roles: values.roles || [],
       };
 
       await userService.createUser(payload);
@@ -141,16 +148,23 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ open, onClose, onSucc
         </Form.Item>
 
         <Form.Item
-          name="globalRole"
+          name="roles"
           label={t('users.role')}
           rules={[{ required: true, message: t('users.role_required') }]}
         >
-          <Select loading={loading}>
-            {roles.map(role => (
-              <Select.Option key={role.id} value={role.name}>
-                {role.name}
-              </Select.Option>
-            ))}
+          <Select 
+            mode="multiple"
+            placeholder={t('users.select_roles')}
+            loading={loading}
+            allowClear
+          >
+            {roles
+              .filter(role => isCurrentUserAdmin || role.name !== 'ADMINISTRATOR')
+              .map(role => (
+                <Select.Option key={role.id} value={role.name}>
+                  {role.name}
+                </Select.Option>
+              ))}
           </Select>
         </Form.Item>
 

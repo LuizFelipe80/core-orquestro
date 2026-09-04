@@ -70,7 +70,10 @@ public class UserRoleService {
             throw new BusinessException("A profile with this name already exists.", HttpStatus.CONFLICT);
         }
 
-        Set<ModuleRole> moduleRoles = new HashSet<>(moduleRoleRepository.findAllById(request.moduleRoleIds()));
+        Set<ModuleRole> moduleRoles = new HashSet<>();
+        if (request.moduleRoleIds() != null && !request.moduleRoleIds().isEmpty()) {
+            moduleRoles.addAll(moduleRoleRepository.findAllById(request.moduleRoleIds()));
+        }
 
         UserRole userRole = UserRole.builder()
                 .name(request.name().toUpperCase().trim())

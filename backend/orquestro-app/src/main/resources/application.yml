@@ -36,12 +36,12 @@ springdoc:
   paths-to-match: /auth/**, /users/**, /languages/**, /user-roles/**, /module-roles/**
 
 # Management Endpoints Configuration (Actuator)
-  management:
-    endpoints:
-      web:
-        exposure:
-# Em produção, expomos apenas o essencial para o health check
-          include: health, info
-      endpoint:
+management:
+  endpoints:
+    web:
+      exposure:
+        # Em produção, expomos apenas o essencial para o health check
+        include: health, info
+  endpoint:
     health:
       show-details: when_authorized

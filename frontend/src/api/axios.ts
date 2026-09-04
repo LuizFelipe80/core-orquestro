@@ -54,8 +54,8 @@ api.interceptors.response.use(
     const { response, config } = error;
     const status = response?.status;
 
-    /* If error is 401 and it's not a login request, try to refresh */
-    if (status === 401 && config && !config.url?.includes('/auth/authenticate')) {
+    /* If error is 401 and it's not a login or refresh request, try to refresh */
+    if (status === 401 && config && !config.url?.includes('/auth/authenticate') && !config.url?.includes('/auth/refresh')) {
       
       /* If already refreshing, queue this request */
       if (isRefreshing) {

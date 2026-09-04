@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, App as AntdApp } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../../context/AuthContext';
 import { UserResponseDTO, UserUpdateDTO, UserRoleResponseDTO } from '../types/userTypes';
 import userService from '../services/userService';
 import languageService, { LanguageResponseDTO } from '../../languages/services/languageService';
@@ -19,18 +20,22 @@ interface UserEditModalProps {
 /**
  * Modal component for editing user information.
  * Updated to support multiple role selection (Indirect RBAC model).
+ * Enforces privilege escalation prevention (only ADMINISTRATOR can assign/modify ADMINISTRATOR role).
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSuccess }) => {
   const { t } = useTranslation();
   const { message } = AntdApp.useApp();
+  const { hasRole } = useAuth();
   const [form] = Form.useForm();
   
   const [languages, setLanguages] = useState<LanguageResponseDTO[]>([]);
   const [roles, setRoles] = useState<UserRoleResponseDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const isCurrentUserAdmin = hasRole('ADMINISTRATOR');
 
   /**
    * Fetches the necessary options for the form when opened.
@@ -154,11 +159,13 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ open, user, onClose, onSu
             loading={loading}
             allowClear
           >
-            {roles.map(role => (
-              <Select.Option key={role.id} value={role.name}>
-                {role.name}
-              </Select.Option>
-            ))}
+            {roles
+              .filter(role => isCurrentUserAdmin || role.name !== 'ADMINISTRATOR')
+              .map(role => (
+                <Select.Option key={role.id} value={role.name}>
+                  {role.name}
+                </Select.Option>
+              ))}
           </Select>
         </Form.Item>
 

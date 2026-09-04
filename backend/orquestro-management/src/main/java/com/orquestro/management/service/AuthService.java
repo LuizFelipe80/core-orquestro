@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -128,8 +129,18 @@ public class AuthService {
                 .orElseGet(() -> languageRepository.findByIsDefaultTrue()
                         .orElseThrow(() -> new BusinessException("Default language not found.", HttpStatus.INTERNAL_SERVER_ERROR)));
 
-        UserRole defaultRole = userRoleRepository.findByName(DEFAULT_REGISTRATION_ROLE)
-                .orElseThrow(() -> new BusinessException("Default user role configuration not found.", HttpStatus.INTERNAL_SERVER_ERROR));
+        Set<UserRole> assignedRoles = new HashSet<>();
+        if (request.roles() != null && !request.roles().isEmpty()) {
+            for (String roleName : request.roles()) {
+                UserRole role = userRoleRepository.findByName(roleName)
+                        .orElseThrow(() -> new BusinessException("Role not found: " + roleName, HttpStatus.BAD_REQUEST));
+                assignedRoles.add(role);
+            }
+        } else {
+            UserRole defaultRole = userRoleRepository.findByName(DEFAULT_REGISTRATION_ROLE)
+                    .orElseThrow(() -> new BusinessException("Default user role configuration not found.", HttpStatus.INTERNAL_SERVER_ERROR));
+            assignedRoles.add(defaultRole);
+        }
 
         User user = User.builder()
                 .firstName(request.firstName())
@@ -139,7 +150,7 @@ public class AuthService {
                 .language(language)
                 .active(true)
                 .accountLocked(false)
-                .roles(Set.of(defaultRole))
+                .roles(assignedRoles)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -211,13 +222,15 @@ public class AuthService {
     }
 
     /**
-     * Persists a new session in the database.
+     * Persists a new session in the database with configured expiration duration.
      */
     private void saveUserSession(User user, String refreshToken) {
+        LocalDateTime expiresAt = LocalDateTime.now().plus(java.time.Duration.ofMillis(refreshExpiration));
+
         UserSession session = UserSession.builder()
                 .user(user)
                 .refreshToken(refreshToken)
-                .expiresAt(LocalDateTime.now().plusWeeks(1))
+                .expiresAt(expiresAt)
                 .revoked(false)
                 .build();
         userSessionRepository.save(session);

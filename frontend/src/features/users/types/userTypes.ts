@@ -46,6 +46,18 @@ export interface UserResponseDTO {
 }
 
 /**
+ * Payload for administrative user creation.
+ */
+export interface UserCreateDTO {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  languageId: string;
+  roles: string[];
+}
+
+/**
  * Generic interface for paginated data from Spring Data JPA.
  */
 export interface PaginatedResponse<T> {

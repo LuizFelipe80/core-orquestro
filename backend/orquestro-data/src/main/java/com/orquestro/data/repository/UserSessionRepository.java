@@ -3,8 +3,12 @@ package com.orquestro.data.repository;
 import com.orquestro.data.domain.User;
 import com.orquestro.data.domain.UserSession;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,4 +47,14 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
      * @return a list of active user sessions.
      */
     List<UserSession> findAllByUserAndRevokedFalse(User user);
+
+    /**
+     * Purges expired or revoked sessions from the database in batch.
+     * 
+     * @param now the reference timestamp.
+     * @return number of records deleted.
+     */
+    @Modifying
+    @Query("DELETE FROM UserSession s WHERE s.expiresAt < :now OR s.revoked = true")
+    int deleteExpiredOrRevokedSessions(@Param("now") LocalDateTime now);
 }

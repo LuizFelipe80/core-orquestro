@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Tabs, Form, Input, Button, Select, Typography, Space, App as AntdApp } from 'antd';
-import { UserOutlined, LockOutlined, GlobalOutlined, SaveOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, SaveOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
 import languageService, { LanguageResponseDTO } from '../../languages/services/languageService';
-import { UserResponseDTO } from '../types/userTypes';
 
 const { Title, Text } = Typography;
 

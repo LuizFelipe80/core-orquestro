@@ -1,5 +1,5 @@
 import api from '../../../api/axios';
-import { UserResponseDTO, UserUpdateDTO, PaginatedResponse, UserProfileUpdateDTO, PasswordChangeRequestDTO } from '../types/userTypes';
+import { UserResponseDTO, UserUpdateDTO, UserCreateDTO, PaginatedResponse, UserProfileUpdateDTO, PasswordChangeRequestDTO } from '../types/userTypes';
 
 /**
  * Service responsible for user-related API calls.
@@ -93,11 +93,9 @@ const userService = {
 
   /**
    * Administratively creates a new user.
-   * Reuses the register logic but within the management context.
    */
-  createUser: async (data: any): Promise<UserResponseDTO> => {
-    // Note: On backend, this is mapped to /auth/register
-    const response = await api.post<UserResponseDTO>('/auth/register', data);
+  createUser: async (data: UserCreateDTO): Promise<UserResponseDTO> => {
+    const response = await api.post<UserResponseDTO>('/users', data);
     return response.data;
   },
 };

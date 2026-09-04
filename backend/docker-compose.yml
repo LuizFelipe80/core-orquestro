@@ -6,8 +6,8 @@ services:
     container_name: orquestro-db
     environment:
       POSTGRES_DB: orquestro_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: orquestro_admin
+      POSTGRES_PASSWORD: orquestro_secure_password
     ports:
       - "5432:5432"
     volumes:

@@ -7,6 +7,7 @@ import com.orquestro.data.repository.LanguageRepository;
 import com.orquestro.data.repository.UserRepository;
 import com.orquestro.data.repository.UserRoleRepository;
 import com.orquestro.management.dto.request.PasswordChangeRequestDTO;
+import com.orquestro.management.dto.request.UserCreateRequestDTO;
 import com.orquestro.management.dto.request.UserProfileUpdateDTO;
 import com.orquestro.management.dto.request.UserUpdateDTO;
 import com.orquestro.management.dto.response.UserResponseDTO;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,12 +31,16 @@ import java.util.stream.Collectors;
  * Service responsible for managing administrative and self-service user operations.
  * Implements a flexible RBAC model that allows users to hold multiple access profiles
  * simultaneously, enabling permission aggregation across different modules.
+ * Includes privilege escalation protection to ensure only ADMINISTRATORs can grant ADMINISTRATOR roles.
  * 
  * @author L.F. Desenvolvimento de Softwares LTDA
  */
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final String DEFAULT_ROLE = "USER";
+    private static final String ADMIN_ROLE = "ADMINISTRATOR";
 
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
@@ -61,8 +67,54 @@ public class UserService {
     }
 
     /**
+     * Administratively creates a new user with configured roles and language.
+     * Enforces privilege escalation protection.
+     * 
+     * @param request the user creation data.
+     * @return the created UserResponseDTO.
+     */
+    @Transactional
+    public UserResponseDTO create(UserCreateRequestDTO request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new BusinessException("Email address already in use.", HttpStatus.CONFLICT);
+        }
+
+        Language language = languageRepository.findById(request.languageId())
+                .orElseThrow(() -> new BusinessException("The selected language was not found.", HttpStatus.BAD_REQUEST));
+
+        Set<String> roleNames = (request.roles() != null && !request.roles().isEmpty()) 
+                ? request.roles() 
+                : Set.of(DEFAULT_ROLE);
+
+        // Security check: only an ADMINISTRATOR can assign the ADMINISTRATOR role
+        if (roleNames.stream().anyMatch(r -> r.equalsIgnoreCase(ADMIN_ROLE)) && !isCallerAdmin()) {
+            throw new BusinessException("Only an ADMINISTRATOR can assign the ADMINISTRATOR role.", HttpStatus.FORBIDDEN);
+        }
+
+        Set<UserRole> targetRoles = new HashSet<>();
+        for (String roleName : roleNames) {
+            UserRole role = userRoleRepository.findByName(roleName)
+                    .orElseThrow(() -> new BusinessException("Role not found: " + roleName, HttpStatus.BAD_REQUEST));
+            targetRoles.add(role);
+        }
+
+        User user = User.builder()
+                .firstName(request.firstName())
+                .lastName(request.lastName())
+                .email(request.email())
+                .password(passwordEncoder.encode(request.password()))
+                .language(language)
+                .active(true)
+                .accountLocked(false)
+                .roles(targetRoles)
+                .build();
+
+        return mapToResponse(userRepository.save(user));
+    }
+
+    /**
      * Updates an existing user's information and access roles.
-     * Implements role synchronization to support multiple UserRoles.
+     * Enforces privilege escalation protection.
      * 
      * @param id the user UUID.
      * @param request the update data containing a set of role names.
@@ -86,6 +138,13 @@ public class UserService {
                         .orElseThrow(() -> new BusinessException("Role not found: " + roleName, HttpStatus.BAD_REQUEST)))
                 .collect(Collectors.toSet());
 
+        // Privilege Escalation Protection: Only an ADMINISTRATOR can modify an existing ADMINISTRATOR or grant the ADMINISTRATOR role
+        boolean existingIsAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equalsIgnoreCase(ADMIN_ROLE));
+        boolean targetIsAdmin = targetRoles.stream().anyMatch(r -> r.getName().equalsIgnoreCase(ADMIN_ROLE));
+        if ((existingIsAdmin || targetIsAdmin) && !isCallerAdmin()) {
+            throw new BusinessException("Only an ADMINISTRATOR can modify an ADMINISTRATOR user or assign the ADMINISTRATOR role.", HttpStatus.FORBIDDEN);
+        }
+
         user.setFirstName(request.firstName());
         user.setLastName(request.lastName());
         user.setEmail(request.email());
@@ -94,6 +153,18 @@ public class UserService {
         user.getRoles().addAll(targetRoles);
 
         return mapToResponse(userRepository.save(user));
+    }
+
+    /**
+     * Verifies if the currently authenticated principal holds the ROLE_ADMINISTRATOR authority.
+     */
+    private boolean isCallerAdmin() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_" + ADMIN_ROLE) || a.getAuthority().equals(ADMIN_ROLE));
     }
 
     /**
